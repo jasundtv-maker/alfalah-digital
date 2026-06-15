@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 import os
 import urllib.parse
 import requests
@@ -82,10 +82,12 @@ def kirim_telegram(pesan):
             token = st.secrets["TELEGRAM_BOT_TOKEN"]
         except:
             token = None
+
     if not token:
         return False
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
+
     try:
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
         requests.post(url, json={"chat_id": CHAT_ID, "text": pesan}, timeout=10)
         return True
     except:
@@ -98,10 +100,13 @@ def tanggal_berikutnya(target_weekday):
         selisih = 7
     return hari_ini + timedelta(days=selisih)
 
-def index_rotasi(tanggal_acuan):
-    start = date(2026, 6, 16)
-    minggu = ((tanggal_acuan - start).days // 7) % 4
-    return minggu
+def index_rotasi_rabu(tgl_rabu):
+    start = date(2026, 6, 17)  # Rabu pertama: Ustadz Ihin
+    return ((tgl_rabu - start).days // 7) % 4
+
+def index_rotasi_senin(tgl_senin):
+    start = date(2026, 6, 15)  # Senin pertama: Ustadz Nanang
+    return ((tgl_senin - start).days // 7) % 4
 
 def format_tanggal(tgl):
     nama_hari = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
@@ -163,12 +168,10 @@ if menu == "🏠 Dashboard":
     st.divider()
 
     tgl_rabu = tanggal_berikutnya(2)
-    idx_rabu = index_rotasi(tgl_rabu)
-    ustadz_rabu = pengajian_malam_rabu[idx_rabu]
+    ustadz_rabu = pengajian_malam_rabu[index_rotasi_rabu(tgl_rabu)]
 
     tgl_senin = tanggal_berikutnya(0)
-    idx_senin = index_rotasi(tgl_senin)
-    ustadz_senin = pengajian_senin[idx_senin]
+    ustadz_senin = pengajian_senin[index_rotasi_senin(tgl_senin)]
 
     st.markdown("## 📌 Jadwal Pengajian Minggu Ini")
 
