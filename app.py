@@ -104,10 +104,10 @@ menu = st.sidebar.radio(
 
 if menu == "🏠 Dashboard":
 
-   st.image(
-       "banner.png",
-       use_container_width=True
-   )
+    st.image(
+        "banner.png",
+        use_container_width=True
+    )
 
     st.title("🕌 APP MASJID JAMI AL-FALAH")
 
