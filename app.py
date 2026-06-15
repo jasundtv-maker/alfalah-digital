@@ -2,22 +2,23 @@ import streamlit as st
 import pandas as pd
 import qrcode
 import os
+import requests
 from io import BytesIO
 from datetime import datetime
 import urllib.parse
 
 # =========================
-# AL-FALAH DIGITAL V3
+# AL-FALAH DIGITAL V4
 # =========================
 
 NAMA_MASJID = "Masjid Jami Al-Falah"
 ALAMAT_MASJID = "Kp Caringin RT 005 / RW 005, Desa Sukasari, Kec. Karangtengah, Kab. Cianjur"
+
 KETUA_DKM = "Aang Deden Kasyful Anwar"
+WAKIL_KETUA_DKM = "Iden Tazuni"
 BENDAHARA = "Aceng Abdul Roup"
 
 WA_BENDAHARA = "6281395440454"
-WA_AANG_DEDEN = "6285722090778"
-WA_USTADZ_IHIN = "6287799541295"
 
 REK_BCA = "1831149782"
 DANA = "081395440454"
@@ -26,6 +27,10 @@ ADMIN_PASSWORD = "alfalah123"
 KAS_FILE = "kas_masjid.csv"
 
 SALDO_AWAL = 8383500
+
+# Telegram pakai bot yang sudah jalan di GOBENG
+TELEGRAM_BOT_TOKEN = "8742663611:AAE4hrUYrM8gagxr9qQCPd2N71TH9czF3tY"
+TELEGRAM_CHAT_ID = "8951538688"
 
 
 # =========================
@@ -86,11 +91,9 @@ def simpan_transaksi(tanggal, bulan, jenis, kategori, keterangan, jumlah):
 
 def hitung_kas():
     data = baca_kas()
-
     pemasukan = data[data["jenis"] == "Pemasukan"]["jumlah"].sum()
     pengeluaran = data[data["jenis"] == "Pengeluaran"]["jumlah"].sum()
     saldo = SALDO_AWAL + pemasukan - pengeluaran
-
     return pemasukan, pengeluaran, saldo
 
 
@@ -102,6 +105,7 @@ def buat_qr(link):
     qr = qrcode.QRCode(version=2, box_size=10, border=4)
     qr.add_data(link)
     qr.make(fit=True)
+
     img = qr.make_image(fill_color="black", back_color="white")
     buffer = BytesIO()
     img.save(buffer, format="PNG")
@@ -109,12 +113,51 @@ def buat_qr(link):
     return buffer
 
 
+def kirim_telegram(pesan):
+    if TELEGRAM_BOT_TOKEN == "ISI_TOKEN_TELEGRAM_KAMU":
+        return False
+
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+
+    data = {
+        "chat_id": TELEGRAM_CHAT_ID,
+        "text": pesan,
+        "parse_mode": "HTML"
+    }
+
+    try:
+        requests.post(url, data=data, timeout=10)
+        return True
+    except Exception:
+        return False
+
+
+def penceramah_laki_laki(minggu_ke):
+    jadwal = {
+        1: "Ustadz Ihin",
+        2: "Ustadz Nanang",
+        3: "Ustadz Jujun",
+        4: "Aang Deden Kasyful Anwar"
+    }
+    return jadwal.get(minggu_ke, "Ustadz Ihin")
+
+
+def penceramah_ibu_ibu(minggu_ke):
+    jadwal = {
+        1: "Aang Deden Kasyful Anwar",
+        2: "Ustadz Ihin",
+        3: "Ustadz Ihin",
+        4: "Ustadz Nanang"
+    }
+    return jadwal.get(minggu_ke, "Aang Deden Kasyful Anwar")
+
+
 # =========================
 # HALAMAN
 # =========================
 
 st.set_page_config(
-    page_title="Al-Falah Digital V3",
+    page_title="Al-Falah Digital V4",
     page_icon="🕌",
     layout="centered"
 )
@@ -195,6 +238,7 @@ div.stDownloadButton > button {
 </style>
 """, unsafe_allow_html=True)
 
+
 # =========================
 # HEADER
 # =========================
@@ -224,9 +268,11 @@ menu = st.radio(
         "💚 Sedekah",
         "📖 Jadwal Pengajian",
         "🌙 Syahriahan Sholawat",
+        "🔔 Notifikasi Pengajian",
         "🔐 Admin Bendahara"
     ]
 )
+
 
 # =========================
 # BERANDA
@@ -240,6 +286,7 @@ if menu == "🏠 Beranda":
         <h3>{NAMA_MASJID}</h3>
         <p>{ALAMAT_MASJID}</p>
         <p><b>Ketua DKM:</b> {KETUA_DKM}</p>
+        <p><b>Wakil Ketua DKM:</b> {WAKIL_KETUA_DKM}</p>
         <p><b>Bendahara:</b> {BENDAHARA}</p>
     </div>
     """, unsafe_allow_html=True)
@@ -260,7 +307,7 @@ if menu == "🏠 Beranda":
     <div class="info-card">✅ Input pemasukan dan pengeluaran bulanan</div>
     <div class="info-card">✅ Informasi sedekah dan infaq</div>
     <div class="info-card">✅ Jadwal pengajian mingguan</div>
-    <div class="info-card">✅ Informasi syahriahan sholawat</div>
+    <div class="info-card">✅ Pengingat Telegram ke Bendahara</div>
     """, unsafe_allow_html=True)
 
 
@@ -367,7 +414,7 @@ elif menu == "📖 Jadwal Pengajian":
         <p><b>Tempat:</b> Madrasah Al-Falah</p>
         <p><b>Waktu:</b> Selasa malam Rabu</p>
         <p><b>Jam:</b> 19.30 - 21.30 WIB</p>
-        <p><b>Penceramah:</b> Aang Deden, Ustadz Ihin, Ustadz Nanang, Ustadz Jujun</p>
+        <p><b>Rotasi Penceramah:</b> Ustadz Ihin, Ustadz Nanang, Ustadz Jujun, Aang Deden Kasyful Anwar</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -384,18 +431,6 @@ elif menu == "📖 Jadwal Pengajian":
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("### 📱 Hubungi Penceramah")
-    st.link_button(
-        "📱 Hubungi Aang Deden",
-        link_wa(WA_AANG_DEDEN, "Assalamualaikum Aang Deden, mengingatkan jadwal pengajian di Madrasah Al-Falah."),
-        use_container_width=True
-    )
-    st.link_button(
-        "📱 Hubungi Ustadz Ihin",
-        link_wa(WA_USTADZ_IHIN, "Assalamualaikum Ustadz Ihin, mengingatkan jadwal pengajian di Madrasah Al-Falah."),
-        use_container_width=True
-    )
-
 
 # =========================
 # SHOLAWAT
@@ -409,12 +444,95 @@ elif menu == "🌙 Syahriahan Sholawat":
         <h3>Syahriahan Sholawat Masjid Jami Al-Falah</h3>
         <p><b>Tempat:</b> {NAMA_MASJID}</p>
         <p><b>Waktu:</b> Malam Jumat awal bulan Hijriah</p>
+        <p><b>Pimpinan:</b> Aang Deden Kasyful Anwar</p>
         <p>
         Kegiatan syahriahan sholawat dilaksanakan sebagai bentuk ikhtiar
         mempererat ukhuwah, memperbanyak sholawat, dan memakmurkan masjid.
         </p>
     </div>
     """, unsafe_allow_html=True)
+
+
+# =========================
+# NOTIFIKASI
+# =========================
+
+elif menu == "🔔 Notifikasi Pengajian":
+    st.markdown("## 🔔 Notifikasi Pengajian Telegram")
+
+    st.info("Menu ini hanya mengirim pengingat ke Telegram Bendahara DKM, bukan ke nomor ustadz.")
+
+    minggu_ke = st.selectbox("Pilih Minggu Ke", [1, 2, 3, 4])
+
+    penceramah_lk = penceramah_laki_laki(minggu_ke)
+    penceramah_ibu = penceramah_ibu_ibu(minggu_ke)
+
+    st.markdown(f"""
+    <div class="green-card">
+        <h3>📖 Pengajian Laki-Laki</h3>
+        <p><b>Tempat:</b> Madrasah Al-Falah</p>
+        <p><b>Waktu:</b> Selasa malam Rabu</p>
+        <p><b>Jam:</b> 19.30 - 21.30 WIB</p>
+        <p><b>Penceramah Minggu ke-{minggu_ke}:</b> {penceramah_lk}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(f"""
+    <div class="green-card">
+        <h3>👩 Pengajian Ibu-Ibu</h3>
+        <p><b>Tempat:</b> Madrasah Al-Falah</p>
+        <p><b>Waktu:</b> Senin pagi</p>
+        <p><b>Jam:</b> 07.30 - 09.00 WIB</p>
+        <p><b>Penceramah Minggu ke-{minggu_ke}:</b> {penceramah_ibu}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if st.button("📢 Kirim Pengingat Pengajian Laki-Laki"):
+        pesan = f"""
+🕌 <b>PENGINGAT PENGAJIAN LAKI-LAKI</b>
+
+📍 Tempat: Madrasah Al-Falah
+📅 Waktu: Selasa malam Rabu
+🕢 Jam: 19.30 - 21.30 WIB
+👳 Penceramah: <b>{penceramah_lk}</b>
+
+Mohon dipersiapkan.
+"""
+        if kirim_telegram(pesan):
+            st.success("Notifikasi pengajian laki-laki berhasil dikirim ke Telegram.")
+        else:
+            st.warning("Notifikasi belum terkirim. Cek token Telegram.")
+
+    if st.button("📢 Kirim Pengingat Pengajian Ibu-Ibu"):
+        pesan = f"""
+🕌 <b>PENGINGAT PENGAJIAN IBU-IBU</b>
+
+📍 Tempat: Madrasah Al-Falah
+📅 Waktu: Senin pagi
+🕢 Jam: 07.30 - 09.00 WIB
+👳 Penceramah: <b>{penceramah_ibu}</b>
+
+Mohon dipersiapkan.
+"""
+        if kirim_telegram(pesan):
+            st.success("Notifikasi pengajian ibu-ibu berhasil dikirim ke Telegram.")
+        else:
+            st.warning("Notifikasi belum terkirim. Cek token Telegram.")
+
+    if st.button("🌙 Kirim Pengingat Syahriahan Sholawat"):
+        pesan = """
+🌙 <b>PENGINGAT SYAHRIAHAN SHOLAWAT</b>
+
+📍 Tempat: Masjid Jami Al-Falah
+📅 Waktu: Malam Jumat awal bulan Hijriah
+👳 Pimpinan: <b>Aang Deden Kasyful Anwar</b>
+
+Mohon dipersiapkan.
+"""
+        if kirim_telegram(pesan):
+            st.success("Notifikasi syahriahan berhasil dikirim ke Telegram.")
+        else:
+            st.warning("Notifikasi belum terkirim. Cek token Telegram.")
 
 
 # =========================
@@ -487,10 +605,11 @@ elif menu == "🔐 Admin Bendahara":
         with tab3:
             st.info(f"Saldo awal sistem: {format_rupiah(SALDO_AWAL)}")
             st.info("Password admin saat ini: alfalah123")
+            st.warning("Jangan sebarkan password admin kepada jamaah umum.")
 
     elif password:
         st.error("Password salah.")
 
 
 st.divider()
-st.caption("Al-Falah Digital V3 | Masjid Jami Al-Falah | Transparansi, Amanah, dan Kemakmuran Masjid")
+st.caption("Al-Falah Digital V4 | Masjid Jami Al-Falah | Transparansi, Amanah, dan Kemakmuran Masjid")
