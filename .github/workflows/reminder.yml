@@ -27,10 +27,12 @@ jobs:
         run: |
           DAY=$(date -u +%u)
 
-          if [ "$DAY" = "1" ]; then
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            REMINDER_MODE=pengajian_laki python reminder.py
+          elif [ "$DAY" = "1" ]; then
             REMINDER_MODE=pengajian_laki python reminder.py
           elif [ "$DAY" = "4" ]; then
             REMINDER_MODE=syahriahan python reminder.py
           elif [ "$DAY" = "7" ]; then
             REMINDER_MODE=pengajian_ibu python reminder.py
-          fi
+          fi   
