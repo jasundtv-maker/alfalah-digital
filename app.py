@@ -103,6 +103,27 @@ menu = st.sidebar.radio(
 )
 
 if menu == "🏠 Dashboard":
+        st.image(
+        "https://raw.githubusercontent.com/jasundtv-maker/alfalah-digital/main/banner_masjid.jpg.png",
+        use_container_width=True
+    )
+
+    st.markdown("""
+    <div style="
+    background: linear-gradient(135deg,#064e3b,#15803d,#d4af37);
+    padding:25px;
+    border-radius:18px;
+    color:white;
+    text-align:center;
+    margin-top:15px;
+    margin-bottom:25px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.25);
+    ">
+    <h1>🕌 APP MASJID JAMI AL-FALAH</h1>
+    <h3>Sistem Informasi dan Administrasi Masjid Terpadu</h3>
+    <p>Kp. Caringin RT 005 RW 005, Desa Sukasari, Karangtengah, Cianjur</p>
+    </div>
+    """, unsafe_allow_html=True)
     pemasukan = kas_df[kas_df["Jenis"] == "Pemasukan"]["Jumlah"].sum()
     pengeluaran = kas_df[kas_df["Jenis"] == "Pengeluaran"]["Jumlah"].sum()
     saldo = pemasukan - pengeluaran
