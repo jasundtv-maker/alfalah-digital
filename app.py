@@ -79,9 +79,13 @@ kas_df = load_kas()
 pengumuman_df = load_pengumuman()
 
 st.markdown("""
-# 🕌 AL-FALAH DIGITAL V5
-## Masjid Jami Al-Falah
-Kp. Caringin RT 005 RW 005, Desa Sukasari, Kecamatan Karangtengah, Kabupaten Cianjur
+# 🕌 APP MASJID JAMI AL-FALAH
+
+### Masjid Jami Al-Falah
+### Kp. Caringin RT 005 RW 005
+### Desa Sukasari - Kecamatan Karangtengah - Kabupaten Cianjur
+
+⭐ Sistem Informasi, Administrasi, Kas, Pengajian dan Pengumuman Masjid
 """)
 
 menu = st.sidebar.radio(
