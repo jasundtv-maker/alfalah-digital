@@ -103,6 +103,7 @@ menu = st.sidebar.radio(
 )
 
 if menu == "🏠 Dashboard":
+
     st.image(
         "banner_masjid.png",
         use_container_width=True
@@ -122,6 +123,7 @@ if menu == "🏠 Dashboard":
 
     st.divider()
     st.subheader("📅 Jadwal Utama")
+
     st.dataframe(
         pd.DataFrame(jadwal, columns=["Kegiatan", "Waktu Kegiatan", "Pengisi"]),
         use_container_width=True
