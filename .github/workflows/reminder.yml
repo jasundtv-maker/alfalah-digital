@@ -1,0 +1,36 @@
+name: Pengingat Al-Falah Digital
+
+on:
+  schedule:
+    - cron: '0 1 * * 1'
+    - cron: '0 1 * * 4'
+    - cron: '0 1 * * 0'
+
+  workflow_dispatch:
+
+jobs:
+  pengingat:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install requests
+
+      - name: Kirim Pengingat
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          DAY=$(date -u +%u)
+
+          if [ "$DAY" = "1" ]; then
+            REMINDER_MODE=pengajian_laki python reminder.py
+          elif [ "$DAY" = "4" ]; then
+            REMINDER_MODE=syahriahan python reminder.py
+          elif [ "$DAY" = "7" ]; then
+            REMINDER_MODE=pengajian_ibu python reminder.py
+          fi
