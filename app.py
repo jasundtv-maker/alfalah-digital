@@ -103,15 +103,14 @@ menu = st.sidebar.radio(
 )
 
 if menu == "🏠 Dashboard":
-          st.image(
-            "https://raw.githubusercontent.com/jasundtv-maker/alfalah-digital/main/banner_masjid.jpg.png",
-            use_container_width=True
+
+    st.image(
+        "https://raw.githubusercontent.com/jasundtv-maker/alfalah-digital/main/banner_masjid.jpg.png",
+        use_container_width=True
     )
 
-    st.markdown(
-        "<h1 style='text-align:center;color:green;'>🕌 APP MASJID JAMI AL-FALAH</h1>",
-        unsafe_allow_html=True
-    )
+    st.title("🕌 APP MASJID JAMI AL-FALAH")
+
     pemasukan = kas_df[kas_df["Jenis"] == "Pemasukan"]["Jumlah"].sum()
     pengeluaran = kas_df[kas_df["Jenis"] == "Pengeluaran"]["Jumlah"].sum()
     saldo = pemasukan - pengeluaran
@@ -124,7 +123,10 @@ if menu == "🏠 Dashboard":
 
     st.divider()
     st.subheader("📅 Jadwal Utama")
-    st.dataframe(pd.DataFrame(jadwal, columns=["Kegiatan", "Waktu Kegiatan", "Pengisi"]), use_container_width=True)
+    st.dataframe(
+        pd.DataFrame(jadwal, columns=["Kegiatan", "Waktu Kegiatan", "Pengisi"]),
+        use_container_width=True
+    )
 
 elif menu == "💰 Input Kas":
     st.subheader("💰 Input Kas Masjid")
