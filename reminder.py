@@ -4,6 +4,9 @@ import requests
 from datetime import datetime
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+
+print("TOKEN ADA:", BOT_TOKEN is not None)
+print("PANJANG TOKEN:", len(BOT_TOKEN) if BOT_TOKEN else 0)
 CHAT_ID = "8951538688"
 
 mode = os.getenv("REMINDER_MODE", "pengajian_laki")
