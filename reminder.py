@@ -90,7 +90,7 @@ Jazakumullahu khairan.
 
 url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
-requests.post(
+response = requests.post(
     url,
     json={
         "chat_id": CHAT_ID,
@@ -98,4 +98,4 @@ requests.post(
     }
 )
 
-print("Pesan terkirim")
+print(response.text)
