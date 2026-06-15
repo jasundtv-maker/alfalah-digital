@@ -33,9 +33,9 @@ pengurus = {
 }
 
 jadwal = [
-    ["Pengajian Malam Rabu", "Setiap Selasa 12:00 WIB", "Ustadz Ihin, Ustadz Nanang, Ustadz Jujun, Aang Deden"],
-    ["Pengajian Hari Senin", "Setiap Minggu 20:00 WIB", "Ustadz Nanang, Aang Deden, Ustadz Ihin, Ustadz Ihin"],
-    ["Syahriahan Sholawat", "Kamis 16:00 WIB / Awal Bulan Hijriah", "Aang Deden Kasyful Anwar"]
+    ["Pengajian Laki-laki Malam Rabu", "Setiap malam Rabu, pukul 19:30 - 21:30 WIB", "Ustadz Ihin, Ustadz Nanang, Ustadz Jujun, Aang Deden"],
+    ["Pengajian Ibu-ibu Hari Senin", "Setiap hari Senin, pukul 07:30 - 09:00 WIB", "Ustadz Nanang, Aang Deden, Ustadz Ihin, Ustadz Ihin"],
+    ["Syahriahan Sholawat", "Malam Jumat awal bulan Hijriah", "Aang Deden Kasyful Anwar"]
 ]
 
 # ================= FUNGSI =================
@@ -102,7 +102,7 @@ if menu == "🏠 Dashboard":
 
     st.divider()
     st.subheader("📅 Jadwal Utama")
-    st.dataframe(pd.DataFrame(jadwal, columns=["Kegiatan", "Waktu Notifikasi", "Pengisi"]), use_container_width=True)
+    st.dataframe(pd.DataFrame(jadwal, columns=["Kegiatan", "Waktu Kegiatan", "Pengisi"]), use_container_width=True)
 
 # ================= INPUT KAS =================
 
@@ -165,7 +165,7 @@ elif menu == "📊 Laporan Kas":
         st.info("Belum ada data kas.")
     else:
         kas_df["Tanggal"] = pd.to_datetime(kas_df["Tanggal"])
-        bulan = st.selectbox("Pilih Bulan", sorted(kas_df["Tanggal"].dt.strftime("%Y-%m").unique(), reverse=True))
+        daftar_bulan = sorted(kas
         laporan = kas_df[kas_df["Tanggal"].dt.strftime("%Y-%m") == bulan]
 
         pemasukan = laporan[laporan["Jenis"] == "Pemasukan"]["Jumlah"].sum()
