@@ -74,7 +74,7 @@ def load_pengumuman():
             for k in KOLOM_PENGUMUMAN:
                 if k not in df.columns:
                     df[k] = ""
-            return df[KOLOM_PENGUMAN]
+            return df[KOLOM_PENGUMUMAN]
         except:
             return pd.DataFrame(columns=KOLOM_PENGUMUMAN)
     return pd.DataFrame(columns=KOLOM_PENGUMUMAN)
@@ -150,18 +150,68 @@ if menu == "🏠 Dashboard":
         st.image(BANNER_FILE, use_container_width=True)
 
     st.markdown("""
-    <div style="
-        background: linear-gradient(135deg,#064e3b,#047857,#d4af37);
-        padding: 30px;
-        border-radius: 24px;
+    <style>
+    .gold-title {
+        color: #FFD700;
+        font-size: 50px;
+        font-weight: 900;
+        text-shadow:
+            0 0 5px #FFD700,
+            0 0 12px #FFD700,
+            0 0 25px rgba(255,215,0,0.9),
+            0 0 45px rgba(255,215,0,0.7);
+        margin-bottom: 5px;
+    }
+    .hero-box {
+        background: radial-gradient(circle at top, #0f766e 0%, #064e3b 45%, #022c22 100%);
+        padding: 36px;
+        border-radius: 28px;
         color: white;
         text-align: center;
         margin-bottom: 24px;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.25);
-    ">
-        <h1 style="margin-bottom:5px;">🕌 APP MASJID JAMI AL-FALAH</h1>
-        <h3 style="margin-top:0;">Sistem Informasi, Administrasi, Kas, Pengajian dan Pengumuman Masjid</h3>
-        <p>Kp. Caringin RT 005 RW 005, Desa Sukasari, Karangtengah, Cianjur</p>
+        border: 2px solid rgba(255,215,0,0.75);
+        box-shadow:
+            0 0 20px rgba(255,215,0,0.35),
+            0 0 45px rgba(16,185,129,0.25),
+            0 8px 30px rgba(0,0,0,0.35);
+    }
+    .hero-subtitle {
+        color: #fef9c3;
+        font-size: 24px;
+        font-weight: 700;
+        text-shadow: 0 0 10px rgba(255,255,255,0.5);
+    }
+    .hero-address {
+        color: #ecfdf5;
+        font-size: 17px;
+        margin-top: 10px;
+    }
+    .led-box {
+        background: #020617;
+        border: 3px solid #FFD700;
+        border-radius: 16px;
+        padding: 12px;
+        margin-bottom: 24px;
+        box-shadow:
+            0 0 18px rgba(255,215,0,0.65),
+            inset 0 0 18px rgba(0,255,102,0.15);
+    }
+    .led-text {
+        color: #00ff66;
+        font-size: 22px;
+        font-weight: 900;
+        letter-spacing: 1px;
+        text-shadow:
+            0 0 5px #00ff66,
+            0 0 12px #00ff66,
+            0 0 25px #00ff66;
+    }
+    </style>
+
+    <div class="hero-box">
+        <div class="gold-title">🕌 APP MASJID JAMI AL-FALAH</div>
+        <div class="hero-subtitle">Sistem Informasi, Administrasi, Kas, Pengajian dan Pengumuman Masjid</div>
+        <div class="hero-address">Kp. Caringin RT 005 RW 005 • Desa Sukasari • Karangtengah • Cianjur</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -171,16 +221,11 @@ if menu == "🏠 Dashboard":
         running_text = f"📢 Pengumuman Terbaru: {terakhir['Judul']} - {terakhir['Isi']}"
 
     st.markdown(f"""
-    <marquee style="
-        background:#052e16;
-        color:white;
-        padding:12px;
-        border-radius:12px;
-        font-size:18px;
-        margin-bottom:20px;
-    ">
-        {running_text}
-    </marquee>
+    <div class="led-box">
+        <marquee scrollamount="6" class="led-text">
+            {running_text}
+        </marquee>
+    </div>
     """, unsafe_allow_html=True)
 
     pemasukan = kas_df[kas_df["Jenis"] == "Pemasukan"]["Jumlah"].sum()
