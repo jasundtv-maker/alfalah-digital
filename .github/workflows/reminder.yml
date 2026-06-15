@@ -2,9 +2,14 @@ name: Pengingat Al-Falah Digital
 
 on:
   schedule:
-    - cron: '0 1 * * 1'
-    - cron: '0 1 * * 4'
-    - cron: '0 1 * * 0'
+    # Selasa 12:00 WIB
+    - cron: '0 5 * * 2'
+
+    # Minggu 20:00 WIB
+    - cron: '0 13 * * 0'
+
+    # Kamis 16:00 WIB
+    - cron: '0 9 * * 4'
 
   workflow_dispatch:
 
@@ -29,10 +34,10 @@ jobs:
 
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             REMINDER_MODE=pengajian_laki python reminder.py
-          elif [ "$DAY" = "1" ]; then
+          elif [ "$DAY" = "2" ]; then
             REMINDER_MODE=pengajian_laki python reminder.py
           elif [ "$DAY" = "4" ]; then
             REMINDER_MODE=syahriahan python reminder.py
           elif [ "$DAY" = "7" ]; then
-            REMINDER_MODE=pengajian_ibu python reminder.py
-          fi   
+            REMINDER_MODE=pengajian_senin python reminder.py
+          fi
