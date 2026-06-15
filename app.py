@@ -105,7 +105,7 @@ menu = st.sidebar.radio(
 if menu == "🏠 Dashboard":
 
    st.image(
-       "banner_masjid.png",
+       "banner.png",
        use_container_width=True
    )
 
