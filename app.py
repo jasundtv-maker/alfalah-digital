@@ -5,7 +5,11 @@ import os
 import urllib.parse
 import requests
 
-st.set_page_config(page_title="APP MASJID JAMI AL-FALAH", page_icon="🕌", layout="wide")
+st.set_page_config(
+    page_title="APP MASJID JAMI AL-FALAH",
+    page_icon="🕌",
+    layout="wide"
+)
 
 KAS_FILE = "kas_masjid.csv"
 PENGUMUMAN_FILE = "pengumuman.csv"
@@ -34,6 +38,12 @@ pengurus = {
 
 pengajian_malam_rabu = ["Ustadz Ihin", "Ustadz Nanang", "Ustadz Jujun", "Aang Deden"]
 pengajian_senin = ["Ustadz Nanang", "Aang Deden", "Ustadz Ihin", "Ustadz Ihin"]
+
+agenda_tetap = [
+    ["Pengajian Laki-laki Malam Rabu", "Malam Rabu", "19:30 - 21:30 WIB"],
+    ["Pengajian Ibu-ibu Hari Senin", "Senin", "07:30 - 09:00 WIB"],
+    ["Syahriahan Sholawat", "Malam Jumat awal bulan Hijriah", "20:00 - 21:30 WIB"],
+]
 
 def rupiah(angka):
     try:
@@ -64,7 +74,7 @@ def load_pengumuman():
             for k in KOLOM_PENGUMUMAN:
                 if k not in df.columns:
                     df[k] = ""
-            return df[KOLOM_PENGUMUMAN]
+            return df[KOLOM_PENGUMAN]
         except:
             return pd.DataFrame(columns=KOLOM_PENGUMUMAN)
     return pd.DataFrame(columns=KOLOM_PENGUMUMAN)
@@ -101,11 +111,11 @@ def tanggal_berikutnya(target_weekday):
     return hari_ini + timedelta(days=selisih)
 
 def index_rotasi_rabu(tgl_rabu):
-    start = date(2026, 6, 17)  # Rabu pertama: Ustadz Ihin
+    start = date(2026, 6, 17)
     return ((tgl_rabu - start).days // 7) % 4
 
 def index_rotasi_senin(tgl_senin):
-    start = date(2026, 6, 15)  # Senin pertama: Ustadz Nanang
+    start = date(2026, 6, 15)
     return ((tgl_senin - start).days // 7) % 4
 
 def format_tanggal(tgl):
@@ -142,28 +152,55 @@ if menu == "🏠 Dashboard":
     st.markdown("""
     <div style="
         background: linear-gradient(135deg,#064e3b,#047857,#d4af37);
-        padding: 28px;
-        border-radius: 22px;
+        padding: 30px;
+        border-radius: 24px;
         color: white;
         text-align: center;
         margin-bottom: 24px;
         box-shadow: 0 8px 25px rgba(0,0,0,0.25);
     ">
         <h1 style="margin-bottom:5px;">🕌 APP MASJID JAMI AL-FALAH</h1>
-        <h3 style="margin-top:0;">Sistem Informasi dan Administrasi Masjid Terpadu</h3>
+        <h3 style="margin-top:0;">Sistem Informasi, Administrasi, Kas, Pengajian dan Pengumuman Masjid</h3>
         <p>Kp. Caringin RT 005 RW 005, Desa Sukasari, Karangtengah, Cianjur</p>
     </div>
+    """, unsafe_allow_html=True)
+
+    running_text = "📢 Selamat datang di APP MASJID JAMI AL-FALAH | Jadwal pengajian dan informasi kas dapat dilihat langsung di dashboard ini | Semoga aplikasi ini bermanfaat untuk jamaah dan pengurus DKM."
+    if not pengumuman_df.empty:
+        terakhir = pengumuman_df.tail(1).iloc[0]
+        running_text = f"📢 Pengumuman Terbaru: {terakhir['Judul']} - {terakhir['Isi']}"
+
+    st.markdown(f"""
+    <marquee style="
+        background:#052e16;
+        color:white;
+        padding:12px;
+        border-radius:12px;
+        font-size:18px;
+        margin-bottom:20px;
+    ">
+        {running_text}
+    </marquee>
     """, unsafe_allow_html=True)
 
     pemasukan = kas_df[kas_df["Jenis"] == "Pemasukan"]["Jumlah"].sum()
     pengeluaran = kas_df[kas_df["Jenis"] == "Pengeluaran"]["Jumlah"].sum()
     saldo = pemasukan - pengeluaran
 
+    total_kotak_amal = kas_df[kas_df["Kategori"] == "Kotak Amal"]["Jumlah"].sum()
+    jumlah_buka_kotak = len(kas_df[kas_df["Kategori"] == "Kotak Amal"])
+
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("💰 Saldo Kas", rupiah(saldo))
     c2.metric("⬆️ Total Pemasukan", rupiah(pemasukan))
     c3.metric("⬇️ Total Pengeluaran", rupiah(pengeluaran))
-    c4.metric("👥 Pengurus", sum(len(v) for v in pengurus.values()))
+    c4.metric("📦 Total Kotak Amal", rupiah(total_kotak_amal))
+
+    c5, c6, c7, c8 = st.columns(4)
+    c5.metric("📦 Buka Kotak Amal", f"{jumlah_buka_kotak} kali")
+    c6.metric("👥 Pengurus", sum(len(v) for v in pengurus.values()))
+    c7.metric("📢 Pengumuman", len(pengumuman_df))
+    c8.metric("📅 Agenda Tetap", len(agenda_tetap))
 
     st.divider()
 
@@ -182,8 +219,8 @@ if menu == "🏠 Dashboard":
         <div style="
             background:#f0fdf4;
             border:1px solid #bbf7d0;
-            padding:20px;
-            border-radius:18px;
+            padding:22px;
+            border-radius:20px;
             box-shadow:0 4px 14px rgba(0,0,0,0.08);
         ">
             <h3>📖 Pengajian Laki-laki Malam Rabu</h3>
@@ -201,8 +238,8 @@ if menu == "🏠 Dashboard":
         <div style="
             background:#fffbeb;
             border:1px solid #fde68a;
-            padding:20px;
-            border-radius:18px;
+            padding:22px;
+            border-radius:20px;
             box-shadow:0 4px 14px rgba(0,0,0,0.08);
         ">
             <h3>🌸 Pengajian Ibu-ibu Hari Senin</h3>
@@ -219,9 +256,10 @@ if menu == "🏠 Dashboard":
     <div style="
         background:#eff6ff;
         border:1px solid #bfdbfe;
-        padding:18px;
-        border-radius:18px;
+        padding:20px;
+        border-radius:20px;
         margin-top:18px;
+        box-shadow:0 4px 14px rgba(0,0,0,0.08);
     ">
         <h3>🌙 Syahriahan Sholawat</h3>
         <p><b>Waktu:</b> Malam Jumat awal bulan Hijriah, pukul 20:00 - 21:30 WIB</p>
@@ -234,6 +272,20 @@ if menu == "🏠 Dashboard":
 
     st.divider()
 
+    st.subheader("📈 Grafik Kas Bulanan")
+    if not kas_df.empty:
+        grafik = kas_df.copy()
+        grafik["Tanggal"] = pd.to_datetime(grafik["Tanggal"], errors="coerce")
+        grafik = grafik.dropna(subset=["Tanggal"])
+        grafik["Bulan"] = grafik["Tanggal"].dt.strftime("%Y-%m")
+        ringkasan = grafik.groupby(["Bulan", "Jenis"])["Jumlah"].sum().reset_index()
+        chart_data = ringkasan.pivot(index="Bulan", columns="Jenis", values="Jumlah").fillna(0)
+        st.bar_chart(chart_data)
+    else:
+        st.info("Belum ada data kas untuk grafik.")
+
+    st.divider()
+
     st.subheader("📋 Transaksi Kas Terbaru")
     if kas_df.empty:
         st.info("Belum ada data kas.")
@@ -241,6 +293,14 @@ if menu == "🏠 Dashboard":
         tampil = kas_df.tail(7).copy()
         tampil["Jumlah"] = tampil["Jumlah"].apply(rupiah)
         st.dataframe(tampil, use_container_width=True)
+
+    st.divider()
+
+    st.subheader("📅 Agenda Kegiatan Masjid")
+    st.dataframe(
+        pd.DataFrame(agenda_tetap, columns=["Kegiatan", "Hari", "Waktu"]),
+        use_container_width=True
+    )
 
     st.divider()
 
