@@ -149,19 +149,42 @@ if menu == "🏠 Dashboard":
     if os.path.exists(BANNER_FILE):
         st.image(BANNER_FILE, use_container_width=True)
 
-    st.markdown("""
+        st.markdown("""
     <style>
+    @keyframes glowPulse {
+        0% { text-shadow: 0 0 5px #FFD700, 0 0 12px #FFD700; }
+        50% { text-shadow: 0 0 12px #FFD700, 0 0 30px #FFD700, 0 0 55px #00ff99; }
+        100% { text-shadow: 0 0 5px #FFD700, 0 0 12px #FFD700; }
+    }
+
+    @keyframes lampBlink {
+        0%, 100% { opacity: 1; box-shadow: 0 0 18px #FFD700; }
+        50% { opacity: 0.45; box-shadow: 0 0 4px #FFD700; }
+    }
+
+    .lamp-row {
+        text-align:center;
+        margin-bottom:10px;
+    }
+
+    .lamp {
+        display:inline-block;
+        width:14px;
+        height:14px;
+        margin:0 8px;
+        border-radius:50%;
+        background:#FFD700;
+        animation: lampBlink 1.5s infinite;
+    }
+
     .gold-title {
         color: #FFD700;
-        font-size: 50px;
+        font-size: 52px;
         font-weight: 900;
-        text-shadow:
-            0 0 5px #FFD700,
-            0 0 12px #FFD700,
-            0 0 25px rgba(255,215,0,0.9),
-            0 0 45px rgba(255,215,0,0.7);
+        animation: glowPulse 2.5s infinite;
         margin-bottom: 5px;
     }
+
     .hero-box {
         background: radial-gradient(circle at top, #0f766e 0%, #064e3b 45%, #022c22 100%);
         padding: 36px;
@@ -175,17 +198,32 @@ if menu == "🏠 Dashboard":
             0 0 45px rgba(16,185,129,0.25),
             0 8px 30px rgba(0,0,0,0.35);
     }
+
     .hero-subtitle {
         color: #fef9c3;
         font-size: 24px;
         font-weight: 700;
-        text-shadow: 0 0 10px rgba(255,255,255,0.5);
     }
+
     .hero-address {
         color: #ecfdf5;
         font-size: 17px;
         margin-top: 10px;
     }
+
+    .digital-clock {
+        background:#020617;
+        color:#00ff66;
+        padding:12px;
+        border-radius:14px;
+        border:2px solid #FFD700;
+        display:inline-block;
+        font-size:22px;
+        font-weight:bold;
+        margin-top:14px;
+        box-shadow:0 0 18px rgba(255,215,0,0.6);
+    }
+
     .led-box {
         background: #020617;
         border: 3px solid #FFD700;
@@ -196,6 +234,7 @@ if menu == "🏠 Dashboard":
             0 0 18px rgba(255,215,0,0.65),
             inset 0 0 18px rgba(0,255,102,0.15);
     }
+
     .led-text {
         color: #00ff66;
         font-size: 22px;
@@ -209,9 +248,18 @@ if menu == "🏠 Dashboard":
     </style>
 
     <div class="hero-box">
+        <div class="lamp-row">
+            <span class="lamp"></span>
+            <span class="lamp"></span>
+            <span class="lamp"></span>
+            <span class="lamp"></span>
+            <span class="lamp"></span>
+        </div>
+
         <div class="gold-title">🕌 APP MASJID JAMI AL-FALAH</div>
         <div class="hero-subtitle">Sistem Informasi, Administrasi, Kas, Pengajian dan Pengumuman Masjid</div>
         <div class="hero-address">Kp. Caringin RT 005 RW 005 • Desa Sukasari • Karangtengah • Cianjur</div>
+        <div class="digital-clock">🕒 Jam Digital WIB Aktif</div>
     </div>
     """, unsafe_allow_html=True)
 
