@@ -430,6 +430,34 @@ if menu == "🏠 Dashboard":
 
     st.markdown("""
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800;900&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'Poppins', sans-serif !important;
+}
+
+h1, h2, h3 {
+    font-family: 'Poppins', sans-serif !important;
+    font-weight: 900 !important;
+    letter-spacing: .3px;
+}
+
+[data-testid="stMetricValue"] {
+    font-family: 'Poppins', sans-serif !important;
+    font-weight: 900 !important;
+    color: #064e3b !important;
+    text-shadow: 0 0 8px rgba(255,215,0,.35);
+}
+
+[data-testid="stMetricLabel"] {
+    font-family: 'Poppins', sans-serif !important;
+    font-weight: 800 !important;
+    color: #3b3b3b !important;
+}
+
+.led-text {
+    font-family: 'Poppins', sans-serif !important;
+}
     @keyframes glowPulse {
         0% { text-shadow:0 0 6px #FFD700,0 0 12px #FFD700; }
         50% { text-shadow:0 0 15px #FFD700,0 0 35px #FFD700,0 0 65px #00ff99; }
