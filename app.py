@@ -170,102 +170,129 @@ if menu == "🏠 Dashboard":
     <style>
     @keyframes glowPulse {
         0% { text-shadow:0 0 6px #FFD700,0 0 12px #FFD700; }
-        50% { text-shadow:0 0 12px #FFD700,0 0 30px #FFD700,0 0 55px #00ff99; }
+        50% { text-shadow:0 0 15px #FFD700,0 0 35px #FFD700,0 0 65px #00ff99; }
         100% { text-shadow:0 0 6px #FFD700,0 0 12px #FFD700; }
     }
+
     @keyframes lampBlink {
-        0%,100% { opacity:1; box-shadow:0 0 18px #FFD700; }
-        50% { opacity:.45; box-shadow:0 0 4px #FFD700; }
+        0%,100% { opacity:1; box-shadow:0 0 20px #FFD700; }
+        50% { opacity:.35; box-shadow:0 0 4px #FFD700; }
     }
-    .hero-box {
-        background: radial-gradient(circle at top,#0f766e 0%,#064e3b 45%,#022c22 100%);
-        padding: 36px;
-        border-radius: 28px;
-        color: white;
-        text-align: center;
-        margin-bottom: 24px;
-        border: 2px solid rgba(255,215,0,.8);
-        box-shadow: 0 0 25px rgba(255,215,0,.45), 0 8px 30px rgba(0,0,0,.35);
+
+    @keyframes borderGlow {
+        0% { box-shadow:0 0 18px rgba(255,215,0,.45); }
+        50% { box-shadow:0 0 40px rgba(255,215,0,.95), 0 0 70px rgba(0,255,120,.25); }
+        100% { box-shadow:0 0 18px rgba(255,215,0,.45); }
     }
-    .gold-title {
+
+    .premium-hero {
+        background:
+        radial-gradient(circle at top left, rgba(255,215,0,.22), transparent 30%),
+        radial-gradient(circle at top right, rgba(0,255,120,.18), transparent 35%),
+        linear-gradient(135deg,#011c16,#064e3b,#022c22);
+        padding:38px;
+        border-radius:30px;
+        text-align:center;
+        border:2px solid #FFD700;
+        margin-bottom:24px;
+        animation:borderGlow 3s infinite;
+    }
+
+    .premium-title {
         color:#FFD700;
-        font-size:52px;
-        font-weight:900;
-        animation:glowPulse 2.6s infinite;
-        margin-bottom:5px;
+        font-size:56px;
+        font-weight:950;
+        animation:glowPulse 2.4s infinite;
+        margin-bottom:8px;
     }
-    .hero-subtitle {
+
+    .premium-subtitle {
         color:#fef9c3;
-        font-size:23px;
-        font-weight:700;
+        font-size:24px;
+        font-weight:800;
     }
-    .hero-address {
+
+    .premium-address {
         color:#ecfdf5;
         font-size:17px;
         margin-top:10px;
     }
+
     .lamp {
         display:inline-block;
         width:14px;
         height:14px;
-        margin:0 8px;
+        margin:0 7px;
         border-radius:50%;
         background:#FFD700;
-        animation:lampBlink 1.5s infinite;
+        animation:lampBlink 1.3s infinite;
     }
-    .clock-box {
+
+    .premium-chip {
         background:#020617;
-        border:2px solid #FFD700;
         color:#00ff66;
         display:inline-block;
-        padding:12px 18px;
+        padding:13px 20px;
         border-radius:16px;
+        border:2px solid #FFD700;
         margin-top:18px;
-        font-size:20px;
+        font-size:19px;
         font-weight:900;
-        box-shadow:0 0 18px rgba(255,215,0,.65);
+        box-shadow:0 0 18px rgba(255,215,0,.7);
     }
+
     .led-box {
         background:#020617;
         border:3px solid #FFD700;
-        border-radius:16px;
-        padding:12px;
-        margin-bottom:24px;
-        box-shadow:0 0 18px rgba(255,215,0,.65), inset 0 0 18px rgba(0,255,102,.15);
+        border-radius:18px;
+        padding:13px;
+        margin-bottom:22px;
+        box-shadow:0 0 22px rgba(255,215,0,.75), inset 0 0 20px rgba(0,255,102,.18);
     }
+
     .led-text {
         color:#00ff66;
-        font-size:22px;
-        font-weight:900;
+        font-size:23px;
+        font-weight:950;
         letter-spacing:1px;
-        text-shadow:0 0 5px #00ff66,0 0 12px #00ff66,0 0 25px #00ff66;
+        text-shadow:0 0 6px #00ff66,0 0 14px #00ff66,0 0 28px #00ff66;
+    }
+
+    .card-premium {
+        padding:20px;
+        border-radius:20px;
+        box-shadow:0 6px 18px rgba(0,0,0,.12);
+        border:1px solid rgba(255,215,0,.35);
+        background:linear-gradient(135deg,#ffffff,#f8fafc);
+        margin-bottom:14px;
     }
     </style>
     """, unsafe_allow_html=True)
 
     st.markdown(f"""
-    <div class="hero-box">
+    <div class="premium-hero">
         <div>
-            <span class="lamp"></span><span class="lamp"></span><span class="lamp"></span><span class="lamp"></span><span class="lamp"></span>
+            <span class="lamp"></span><span class="lamp"></span><span class="lamp"></span>
+            <span class="lamp"></span><span class="lamp"></span><span class="lamp"></span>
         </div>
-        <div class="gold-title">🕌 APP MASJID JAMI AL-FALAH</div>
-        <div class="hero-subtitle">Sistem Informasi, Administrasi, Kas, Pengajian dan Pengumuman Masjid</div>
-        <div class="hero-address">Kp. Caringin RT 005 RW 005 • Desa Sukasari • Karangtengah • Cianjur</div>
-        <div class="clock-box">📅 {format_tanggal(tanggal_wib)} &nbsp; | &nbsp; 🌙 {hijriah_text}</div>
+        <div class="premium-title">🕌 APP MASJID JAMI AL-FALAH</div>
+        <div class="premium-subtitle">Sistem Informasi, Administrasi, Kas, Pengajian dan Pengumuman Masjid</div>
+        <div class="premium-address">Kp. Caringin RT 005 RW 005 • Desa Sukasari • Karangtengah • Cianjur</div>
+        <div class="premium-chip">📅 {format_tanggal(tanggal_wib)} &nbsp; | &nbsp; 🌙 {hijriah_text}</div>
     </div>
     """, unsafe_allow_html=True)
 
     components.html("""
     <div style="
         background:#020617;
-        border:2px solid #FFD700;
+        border:3px solid #FFD700;
         color:#00ff66;
-        padding:12px;
-        border-radius:16px;
+        padding:14px;
+        border-radius:18px;
         text-align:center;
-        font-size:30px;
-        font-weight:900;
-        box-shadow:0 0 18px rgba(255,215,0,.65);
+        font-size:34px;
+        font-weight:950;
+        box-shadow:0 0 25px rgba(255,215,0,.8), inset 0 0 22px rgba(0,255,102,.18);
         margin-bottom:18px;
         font-family:Arial;
     ">
@@ -285,7 +312,7 @@ if menu == "🏠 Dashboard":
     setInterval(updateClock, 1000);
     updateClock();
     </script>
-    """, height=90)
+    """, height=95)
 
     running_text = "📢 Selamat datang di APP MASJID JAMI AL-FALAH | Jadwal pengajian dan informasi kas dapat dilihat langsung di dashboard ini."
     if not pengumuman_df.empty:
@@ -294,7 +321,7 @@ if menu == "🏠 Dashboard":
 
     st.markdown(f"""
     <div class="led-box">
-        <marquee scrollamount="6" class="led-text">{running_text}</marquee>
+        <marquee scrollamount="7" class="led-text">{running_text}</marquee>
     </div>
     """, unsafe_allow_html=True)
 
@@ -328,7 +355,7 @@ if menu == "🏠 Dashboard":
 
     with a:
         st.markdown(f"""
-        <div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:22px;border-radius:20px;box-shadow:0 4px 14px rgba(0,0,0,.08);">
+        <div style="background:#f0fdf4;border:1px solid #22c55e;padding:24px;border-radius:22px;box-shadow:0 6px 18px rgba(0,0,0,.10);">
             <h3>📖 Pengajian Laki-laki Malam Rabu</h3>
             <p><b>📅 Tanggal:</b> {format_tanggal(tgl_rabu)}</p>
             <p><b>🕢 Waktu:</b> 19:30 - 21:30 WIB</p>
@@ -339,7 +366,7 @@ if menu == "🏠 Dashboard":
 
     with b:
         st.markdown(f"""
-        <div style="background:#fffbeb;border:1px solid #fde68a;padding:22px;border-radius:20px;box-shadow:0 4px 14px rgba(0,0,0,.08);">
+        <div style="background:#fffbeb;border:1px solid #f59e0b;padding:24px;border-radius:22px;box-shadow:0 6px 18px rgba(0,0,0,.10);">
             <h3>🌸 Pengajian Ibu-ibu Hari Senin</h3>
             <p><b>📅 Tanggal:</b> {format_tanggal(tgl_senin)}</p>
             <p><b>🕢 Waktu:</b> 07:30 - 09:00 WIB</p>
@@ -349,7 +376,7 @@ if menu == "🏠 Dashboard":
         """, unsafe_allow_html=True)
 
     st.markdown("""
-    <div style="background:#eff6ff;border:1px solid #bfdbfe;padding:20px;border-radius:20px;margin-top:18px;box-shadow:0 4px 14px rgba(0,0,0,.08);">
+    <div style="background:#eff6ff;border:1px solid #3b82f6;padding:22px;border-radius:22px;margin-top:18px;box-shadow:0 6px 18px rgba(0,0,0,.10);">
         <h3>🌙 Syahriahan Sholawat</h3>
         <p><b>Waktu:</b> Malam Jumat awal bulan Hijriah, pukul 20:00 - 21:30 WIB</p>
         <p><b>Pengisi:</b> Aang Deden Kasyful Anwar</p>
