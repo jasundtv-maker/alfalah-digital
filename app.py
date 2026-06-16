@@ -1,587 +1,706 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
+from datetime import date, datetime, timedelta, timezone
 import os
 import urllib.parse
-from datetime import datetime
+import requests
 
-# =========================
-# AL-FALAH DIGITAL V12
-# =========================
-
-NAMA_MASJID = "Masjid Jami Al-Falah"
-ALAMAT_MASJID = "Kp Caringin RT 005 / RW 005, Desa Sukasari, Kec. Karangtengah, Kab. Cianjur"
-
-KETUA_DKM = "Aang Deden Kasyful Anwar"
-WAKIL_KETUA = "Iden Tazuni"
-BENDAHARA = "Aceng Abdul Roup"
-
-LINK_APP = "https://kas-masjid-alfalah.streamlit.app"
-GRUP_AL_BARZAJI = "https://chat.whatsapp.com/JWobEDYP9MXEfDYHt8zlLR"
+st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V11.11", page_icon="🕌", layout="wide")
 
 KAS_FILE = "kas_masjid.csv"
-JAMAAH_FILE = "jamaah.csv"
+PENGUMUMAN_FILE = "pengumuman.csv"
+BANNER_FILE = "banner.png"
+CHAT_ID = "8951538688"
 
-ADMIN_PASSWORD = "alfalah123"
+KOLOM_KAS = ["Tanggal", "Jenis", "Kategori", "Keterangan", "Jumlah", "Petugas"]
+KOLOM_PENGUMUMAN = ["Tanggal", "Judul", "Isi"]
 
-SALDO_AWAL = 7080000
+pengurus = {
+    "Pelindung": ["Dadan Haris"],
+    "Pembina": ["Aah Hj Encep Bahrul Ulum"],
+    "Penasihat": ["Pih Uce"],
+    "Ketua DKM": ["Aang Deden Kasyful Anwar"],
+    "Wakil Ketua": ["Iden Tazuni"],
+    "Sekretaris": ["Ustadz Ihin"],
+    "Bendahara": ["Aceng Abdul Roup"],
+    "Pendidikan & Pengajian": ["Usep", "Bim-Bim", "Dede Adol", "M. Oleh"],
+    "Humas & Informasi": ["Wa Hamid", "Ahmad Fauzi", "Ruslan Abdul Gani", "Yudi"],
+    "Sosial & Kemanusiaan": ["Wa Adu", "M. Ajang", "M. Ece Abda", "M. Iman", "Ceng Sasa"],
+    "Sarana & Prasarana": ["Agus Sobur", "Dede Eon", "Jiun", "Dede Ro’i", "Andri", "Empay"],
+    "Kebersihan": ["Baba", "Ujang", "Endat"],
+    "Ibadah & Dakwah": ["Aang Deden", "Ustadz Ihin", "Ustadz Nanang", "Ustadz Jujun", "Pih Uce"],
+    "Keamanan": ["Ace Pu’ad", "Nyanyang (Gonyol)", "M. Emon"]
+}
 
-# =========================
-# DATA AWAL
-# =========================
+pengajian_malam_rabu = ["Ustadz Ihin", "Ustadz Nanang", "Ustadz Jujun", "Aang Deden"]
+pengajian_senin = ["Ustadz Nanang", "Aang Deden", "Ustadz Ihin", "Ustadz Ihin"]
 
-DATA_KAS_AWAL = [
-    ["01-05-2026", "Mei 2026", "Pemasukan", "Saldo Awal", "Serah terima dari bendahara lama", 7080000],
-    ["15-05-2026", "Mei 2026", "Pemasukan", "Kotak Amal", "Setoran kotak amal diterima bendahara", 1661500],
-    ["31-05-2026", "Mei 2026", "Pemasukan", "Kotak Amal", "Pembukaan kotak amal", 942500],
-    ["01-06-2026", "Juni 2026", "Pengeluaran", "Perlengkapan", "White board 2 buah dan spidol", 358000],
+agenda_tetap = [
+    ["Pengajian Laki-laki Malam Rabu", "Malam Rabu", "19:30 - 21:30 WIB"],
+    ["Pengajian Ibu-ibu Hari Senin", "Senin", "07:30 - 09:00 WIB"],
+    ["Syahriahan Sholawat", "Malam Jumat awal bulan Hijriah", "20:00 - 21:30 WIB"],
 ]
 
-DATA_JAMAAH_AWAL = [
-    ["Usep", "Laki-laki", "6285871353759", "Ya", "-"],
-    ["Elan", "Laki-laki", "6281916018461", "Ya", "-"],
-    ["Joni", "Laki-laki", "628562287257", "Ya", "-"],
-    ["Aang Kipl", "Laki-laki", "6285722764887", "Ya", "-"],
-    ["Ustadz Ihin", "Laki-laki", "6287799541295", "Ya", "-"],
-    ["Mang Ade Jiban", "Laki-laki", "6285927979070", "Ya", "-"],
-    ["Dede Ro'i", "Laki-laki", "6281912607968", "Ya", "-"],
-    ["Yudi", "Laki-laki", "6287708449234", "Ya", "-"],
-    ["Amoy", "Perempuan", "6285794505300", "Ya", "-"],
-    ["Zuri", "Perempuan", "6285220812225", "Ya", "-"],
-    ["Mang Emon", "Laki-laki", "6283893804659", "Ya", "-"],
-    ["Wawan", "Laki-laki", "6283113138008", "Ya", "-"],
-    ["Hj. Uus", "Perempuan", "6283869494725", "Ya", "-"],
-    ["Hanah", "Perempuan", "6287875612116", "Ya", "-"],
-    ["Th. Ai Warung", "Perempuan", "6281911421598", "Ya", "-"],
-    ["Th. Ai", "Perempuan", "6285603226828", "Ya", "-"],
-    ["Neng", "Perempuan", "6283833418940", "Ya", "-"],
-    ["Aang Deden", "Laki-laki", "6285722090778", "Khusus", "Hanya jika beliau pengisi acara"],
-]
+def rupiah(angka):
+    try:
+        return "Rp {:,.0f}".format(float(angka)).replace(",", ".")
+    except:
+        return "Rp 0"
 
-# =========================
-# FUNGSI
-# =========================
+def load_kas():
+    if os.path.exists(KAS_FILE):
+        try:
+            df = pd.read_csv(KAS_FILE)
+            for k in KOLOM_KAS:
+                if k not in df.columns:
+                    df[k] = 0 if k == "Jumlah" else ""
+            df["Jumlah"] = pd.to_numeric(df["Jumlah"], errors="coerce").fillna(0)
+            return df[KOLOM_KAS]
+        except:
+            return pd.DataFrame(columns=KOLOM_KAS)
+    return pd.DataFrame(columns=KOLOM_KAS)
 
-def format_rupiah(angka):
-    return "Rp {:,.0f}".format(float(angka)).replace(",", ".")
-
-
-def normalisasi_wa(nomor):
-    nomor = str(nomor).replace("+", "").replace("-", "").replace(" ", "")
-    if nomor.startswith("0"):
-        nomor = "62" + nomor[1:]
-    return nomor
-
-
-def link_wa(nomor, pesan):
-    nomor = normalisasi_wa(nomor)
-    return f"https://wa.me/{nomor}?text={urllib.parse.quote(pesan)}"
-
-
-def init_kas():
-    if not os.path.exists(KAS_FILE):
-        df = pd.DataFrame(
-            DATA_KAS_AWAL,
-            columns=["tanggal", "bulan", "jenis", "kategori", "keterangan", "jumlah"]
-        )
-        df.to_csv(KAS_FILE, index=False)
-
-
-def init_jamaah():
-    if not os.path.exists(JAMAAH_FILE):
-        df = pd.DataFrame(
-            DATA_JAMAAH_AWAL,
-            columns=["Nama", "JenisKelamin", "NoWA", "Aktif", "Catatan"]
-        )
-        df.to_csv(JAMAAH_FILE, index=False)
-
-
-def baca_kas():
-    init_kas()
-
-    df = pd.read_csv(KAS_FILE)
-
-    # Ubah semua nama kolom menjadi huruf kecil
-    df.columns = [str(c).strip().lower() for c in df.columns]
-
-    # Pastikan kolom jumlah ada
-    if "jumlah" not in df.columns:
-
-        if "Jumlah" in df.columns:
-            df.rename(columns={"Jumlah": "jumlah"}, inplace=True)
-
-        elif "JUMLAH" in df.columns:
-            df.rename(columns={"JUMLAH": "jumlah"}, inplace=True)
-
-        else:
-            df["jumlah"] = 0
-
-    df["jumlah"] = pd.to_numeric(
-        df["jumlah"],
-        errors="coerce"
-    ).fillna(0)
-
-    return df
-
-def baca_jamaah():
-    init_jamaah()
-    df = pd.read_csv(JAMAAH_FILE, dtype=str).fillna("-")
-    return df
-
-
-def simpan_transaksi(tanggal, bulan, jenis, kategori, keterangan, jumlah):
-    df = baca_kas()
-    baru = pd.DataFrame([{
-        "tanggal": tanggal,
-        "bulan": bulan,
-        "jenis": jenis,
-        "kategori": kategori,
-        "keterangan": keterangan,
-        "jumlah": jumlah
-    }])
-    df = pd.concat([df, baru], ignore_index=True)
+def save_kas(df):
     df.to_csv(KAS_FILE, index=False)
 
-
-def hitung_kas():
-    df = baca_kas()
-    pemasukan = df[df["jenis"] == "Pemasukan"]["jumlah"].sum()
-    pengeluaran = df[df["jenis"] == "Pengeluaran"]["jumlah"].sum()
-    saldo = pemasukan - pengeluaran
-    kotak_amal = df[df["kategori"] == "Kotak Amal"]["jumlah"].sum()
-    return pemasukan, pengeluaran, saldo, kotak_amal
-
-
-def buat_pesan_senenan(pengisi):
-    return f"""Assalamu'alaikum Warahmatullahi Wabarakatuh.
-
-Besok seperti biasa akan dilaksanakan Pengajian Senenan di Madrasah Al-Falah pada pukul 07.30 WIB.
-
-👳 Pengisi:
-{pengisi}
-
-📍 Tempat:
-Madrasah Al-Falah
-
-👥 Grup Jamaah AL-BARZAJI:
-{GRUP_AL_BARZAJI}
-
-🌐 Informasi jadwal dan pengumuman terbaru:
-{LINK_APP}
-
-Terima kasih kepada jamaah yang hadir tepat waktu.
-
-Pesan ini dikirim otomatis melalui Al-Falah Digital."""
-
-
-def buat_pesan_malam_rabu(pengisi):
-    return f"""Assalamu'alaikum Warahmatullahi Wabarakatuh.
-
-Malam ini akan dilaksanakan Pengajian Malam Rabu di Madrasah Al-Falah pada pukul 19.30 WIB.
-
-👳 Pengisi:
-{pengisi}
-
-📍 Tempat:
-Madrasah Al-Falah
-
-👥 Grup Jamaah AL-BARZAJI:
-{GRUP_AL_BARZAJI}
-
-🌐 Informasi jadwal dan pengumuman terbaru:
-{LINK_APP}
-
-Terima kasih kepada jamaah yang hadir tepat waktu.
-
-Pesan ini dikirim otomatis melalui Al-Falah Digital."""
-
-
-def buat_pesan_syahriahan():
-    return f"""Assalamu'alaikum Warahmatullahi Wabarakatuh.
-
-Malam ini akan dilaksanakan Syahriahan Sholawat di Masjid Jami Al-Falah.
-
-👳 Pimpinan:
-Aang Deden Kasyful Anwar
-
-📍 Tempat:
-Masjid Jami Al-Falah
-
-👥 Grup Jamaah AL-BARZAJI:
-{GRUP_AL_BARZAJI}
-
-🌐 Informasi jadwal dan pengumuman terbaru:
-{LINK_APP}
-
-Terima kasih atas partisipasi seluruh jamaah.
-
-Pesan ini dikirim otomatis melalui Al-Falah Digital."""
-
-
-# =========================
-# TAMPILAN
-# =========================
-
-st.set_page_config(
-    page_title="Al-Falah Digital V12",
-    page_icon="🕌",
-    layout="wide"
-)
-
-st.markdown("""
-<style>
-.stApp {
-    background: linear-gradient(180deg, #002b1a, #00150d);
-    color: white;
-}
-.main-title {
-    text-align: center;
-    color: #ffd700;
-    font-size: 44px;
-    font-weight: 900;
-}
-.sub-title {
-    text-align: center;
-    color: white;
-    font-size: 18px;
-    font-weight: 700;
-}
-.card {
-    background-color: #063b25;
-    padding: 20px;
-    border-radius: 18px;
-    border: 2px solid #ffd700;
-    margin-bottom: 18px;
-}
-.green-card {
-    background-color: #0b5c38;
-    padding: 18px;
-    border-radius: 16px;
-    margin-bottom: 14px;
-    border: 1px solid #ffd700;
-}
-.info-card {
-    background-color: #09301f;
-    padding: 15px;
-    border-radius: 14px;
-    margin-bottom: 12px;
-}
-.warning-card {
-    background-color: #3b2f00;
-    padding: 15px;
-    border-radius: 14px;
-    border: 1px solid #ffd700;
-}
-label, .stTextInput label, .stTextArea label, .stSelectbox label, .stNumberInput label, .stDateInput label {
-    color: white !important;
-    font-weight: bold !important;
-}
-input, textarea, select {
-    color: black !important;
-    background-color: white !important;
-}
-div.stButton > button {
-    width: 100%;
-    background-color: #0fbf63;
-    color: white;
-    font-size: 20px;
-    font-weight: 900;
-    border-radius: 14px;
-    border: none;
-    padding: 14px;
-}
-</style>
-""", unsafe_allow_html=True)
-
-st.markdown('<div class="main-title">🕌 AL-FALAH DIGITAL</div>', unsafe_allow_html=True)
-st.markdown(f'<div class="sub-title">{NAMA_MASJID}</div>', unsafe_allow_html=True)
-st.markdown(f'<div class="sub-title">{ALAMAT_MASJID}</div>', unsafe_allow_html=True)
-
-st.divider()
-
-pemasukan, pengeluaran, saldo, kotak_amal = hitung_kas()
-jamaah_df = baca_jamaah()
-
-c1, c2, c3, c4 = st.columns(4)
-c1.metric("Saldo Kas", format_rupiah(saldo))
-c2.metric("Pemasukan", format_rupiah(pemasukan))
-c3.metric("Pengeluaran", format_rupiah(pengeluaran))
-c4.metric("Kotak Amal", format_rupiah(kotak_amal))
-
-st.divider()
-
-menu = st.radio(
-    "Menu",
-    [
-        "🏠 Dashboard",
-        "💰 Laporan Kas",
-        "💚 Sedekah",
-        "📖 Jadwal Pengajian",
-        "👥 Data Jamaah",
-        "📢 Share WhatsApp",
-        "🔐 Admin Bendahara"
-    ],
-    horizontal=True
-)
-
-# =========================
-# DASHBOARD
-# =========================
-
-if menu == "🏠 Dashboard":
-    st.markdown("## 🏠 Dashboard Masjid")
-
-    st.markdown(f"""
-    <div class="card">
-        <h3>{NAMA_MASJID}</h3>
-        <p>{ALAMAT_MASJID}</p>
-        <p><b>Ketua DKM:</b> {KETUA_DKM}</p>
-        <p><b>Wakil Ketua:</b> {WAKIL_KETUA}</p>
-        <p><b>Bendahara:</b> {BENDAHARA}</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    j1, j2, j3 = st.columns(3)
-    j1.metric("Total Jamaah", len(jamaah_df))
-    j2.metric("Laki-laki", len(jamaah_df[jamaah_df["JenisKelamin"] == "Laki-laki"]))
-    j3.metric("Perempuan", len(jamaah_df[jamaah_df["JenisKelamin"] == "Perempuan"]))
-
-    st.markdown("## 📌 Agenda Tetap")
-    st.markdown("""
-    <div class="info-card">📖 Pengajian Senenan - Senin 07.30 WIB - Madrasah Al-Falah</div>
-    <div class="info-card">📖 Pengajian Malam Rabu - Selasa 19.30 WIB - Madrasah Al-Falah</div>
-    <div class="info-card">🌙 Syahriahan Sholawat - Malam Jumat awal bulan Hijriah - Masjid Al-Falah</div>
-    """, unsafe_allow_html=True)
-
-# =========================
-# LAPORAN KAS
-# =========================
-
-elif menu == "💰 Laporan Kas":
-    st.markdown("## 💰 Laporan Kas Masjid")
-    df = baca_kas()
-
-    bulan_list = ["Semua"] + sorted(df["bulan"].dropna().unique().tolist())
-    pilih_bulan = st.selectbox("Pilih Bulan", bulan_list)
-
-    if pilih_bulan != "Semua":
-        tampil = df[df["bulan"] == pilih_bulan].copy()
-    else:
-        tampil = df.copy()
-
-    total_masuk = tampil[tampil["jenis"] == "Pemasukan"]["jumlah"].sum()
-    total_keluar = tampil[tampil["jenis"] == "Pengeluaran"]["jumlah"].sum()
-
-    k1, k2 = st.columns(2)
-    k1.metric("Pemasukan Terpilih", format_rupiah(total_masuk))
-    k2.metric("Pengeluaran Terpilih", format_rupiah(total_keluar))
-
-    view = tampil.copy()
-    view["jumlah"] = view["jumlah"].apply(format_rupiah)
-    st.dataframe(view, use_container_width=True)
-
-    csv = tampil.to_csv(index=False).encode("utf-8")
-    st.download_button("⬇️ Download Laporan CSV", csv, "laporan_kas_alfalah.csv", "text/csv")
-
-# =========================
-# SEDEKAH
-# =========================
-
-elif menu == "💚 Sedekah":
-    st.markdown("## 💚 Sedekah Masjid Jami Al-Falah")
-
-    st.markdown(f"""
-    <div class="card">
-        <p>Bagi jamaah yang ingin menyalurkan infak, sedekah, dan donasi untuk Masjid Jami Al-Falah:</p>
-        <h3>🏦 Bank BCA</h3>
-        <h2>1831149782</h2>
-        <p>a.n. Aceng Abdul Roup</p>
-        <h3>📱 DANA</h3>
-        <h2>081395440454</h2>
-        <p>a.n. Aceng Abdul Roup</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="warning-card">
-    Karena saat ini Masjid Jami Al-Falah belum memiliki rekening resmi atas nama masjid,
-    maka untuk sementara donasi dititipkan melalui rekening Bendahara DKM.
-    Seluruh dana akan dicatat, dilaporkan secara terbuka, dan digunakan untuk kepentingan masjid.
-    </div>
-    """, unsafe_allow_html=True)
-
-# =========================
-# JADWAL
-# =========================
-
-elif menu == "📖 Jadwal Pengajian":
-    st.markdown("## 📖 Jadwal Pengajian")
-
-    st.markdown("""
-    <div class="green-card">
-        <h3>📖 Pengajian Senenan</h3>
-        <p><b>Tempat:</b> Madrasah Al-Falah</p>
-        <p><b>Hari:</b> Senin pagi</p>
-        <p><b>Jam:</b> 07.30 - 09.00 WIB</p>
-        <p><b>Rotasi:</b> Aang Deden, Ustadz Ihin, Ustadz Ihin, Ustadz Nanang</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="green-card">
-        <h3>📖 Pengajian Malam Rabu</h3>
-        <p><b>Tempat:</b> Madrasah Al-Falah</p>
-        <p><b>Hari:</b> Selasa malam Rabu</p>
-        <p><b>Jam:</b> 19.30 - 21.30 WIB</p>
-        <p><b>Rotasi:</b> Ustadz Ihin, Ustadz Nanang, Ustadz Jujun, Aang Deden</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="green-card">
-        <h3>🌙 Syahriahan Sholawat</h3>
-        <p><b>Tempat:</b> Masjid Jami Al-Falah</p>
-        <p><b>Waktu:</b> Malam Jumat awal bulan Hijriah</p>
-        <p><b>Pimpinan:</b> Aang Deden Kasyful Anwar</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-# =========================
-# DATA JAMAAH
-# =========================
-
-elif menu == "👥 Data Jamaah":
-    st.markdown("## 👥 Data Jamaah")
-
-    df = baca_jamaah()
-
-    a1, a2, a3 = st.columns(3)
-    a1.metric("Total Jamaah", len(df))
-    a2.metric("Laki-laki", len(df[df["JenisKelamin"] == "Laki-laki"]))
-    a3.metric("Perempuan", len(df[df["JenisKelamin"] == "Perempuan"]))
-
-    st.dataframe(df, use_container_width=True)
-
-    st.divider()
-    st.markdown("## ➕ Tambah Jamaah")
-
-    with st.form("form_jamaah"):
-        nama = st.text_input("Nama")
-        jk = st.selectbox("Jenis Kelamin", ["Laki-laki", "Perempuan"])
-        nowa = st.text_input("Nomor WhatsApp")
-        catatan = st.text_input("Catatan", value="-")
-        submit = st.form_submit_button("💾 Simpan Jamaah")
-
-        if submit:
-            if nama.strip() == "" or nowa.strip() == "":
-                st.warning("Nama dan nomor WA wajib diisi.")
-            else:
-                baru = pd.DataFrame([{
-                    "Nama": nama,
-                    "JenisKelamin": jk,
-                    "NoWA": normalisasi_wa(nowa),
-                    "Aktif": "Ya",
-                    "Catatan": catatan
-                }])
-                df = pd.concat([df, baru], ignore_index=True)
-                df.to_csv(JAMAAH_FILE, index=False)
-                st.success("Jamaah berhasil ditambahkan.")
-                st.rerun()
-
-# =========================
-# SHARE WHATSAPP
-# =========================
-
-elif menu == "📢 Share WhatsApp":
-    st.markdown("## 📢 Share WhatsApp Jamaah")
-
-    df = baca_jamaah()
-
-    jenis_pengumuman = st.selectbox(
-        "Pilih Jenis Pengumuman",
-        ["Pengajian Senenan", "Pengajian Malam Rabu", "Syahriahan Sholawat"]
+def load_pengumuman():
+    if os.path.exists(PENGUMUMAN_FILE):
+        try:
+            df = pd.read_csv(PENGUMUMAN_FILE)
+            for k in KOLOM_PENGUMUMAN:
+                if k not in df.columns:
+                    df[k] = ""
+            return df[KOLOM_PENGUMUMAN]
+        except:
+            return pd.DataFrame(columns=KOLOM_PENGUMUMAN)
+    return pd.DataFrame(columns=KOLOM_PENGUMUMAN)
+
+def save_pengumuman(df):
+    df.to_csv(PENGUMUMAN_FILE, index=False)
+
+def wa_link(text):
+    return "https://wa.me/?text=" + urllib.parse.quote(text)
+
+def kirim_telegram(pesan):
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    if not token:
+        try:
+            token = st.secrets["TELEGRAM_BOT_TOKEN"]
+        except:
+            token = None
+    if not token:
+        return False
+    try:
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        requests.post(url, json={"chat_id": CHAT_ID, "text": pesan}, timeout=10)
+        return True
+    except:
+        return False
+
+def tanggal_berikutnya(target_weekday):
+    hari_ini = date.today()
+    selisih = (target_weekday - hari_ini.weekday()) % 7
+    return hari_ini + timedelta(days=selisih)
+
+def index_rotasi_rabu(tgl_rabu):
+    start = date(2026, 6, 16)
+    return ((tgl_rabu - start).days // 7) % 4
+
+def index_rotasi_senin(tgl_senin):
+    start = date(2026, 6, 15)
+    return ((tgl_senin - start).days // 7) % 4
+
+def format_tanggal(tgl):
+    hari = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
+    bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
+    return f"{hari[tgl.weekday()]}, {tgl.day} {bulan[tgl.month-1]} {tgl.year}"
+
+@st.cache_data(ttl=3600)
+def kalender_hijriah_online(tgl):
+    try:
+        tanggal_api = tgl.strftime("%d-%m-%Y")
+        url = f"https://api.aladhan.com/v1/gToH/{tanggal_api}"
+        r = requests.get(url, timeout=10).json()
+        h = r["data"]["hijri"]
+
+        nama_bulan_id = {
+            "Muharram": "Muharram",
+            "Safar": "Safar",
+            "Rabīʿ al-awwal": "Rabiul Awal",
+            "Rabīʿ al-thānī": "Rabiul Akhir",
+            "Jumādá al-ūlá": "Jumadil Awal",
+            "Jumādá al-ākhirah": "Jumadil Akhir",
+            "Rajab": "Rajab",
+            "Shaʿbān": "Sya'ban",
+            "Ramaḍān": "Ramadhan",
+            "Shawwāl": "Syawal",
+            "Dhū al-Qaʿdah": "Dzulqa'dah",
+            "Dhū al-Ḥijjah": "Dzulhijjah",
+        }
+
+        bulan_en = h["month"]["en"]
+        bulan_id = nama_bulan_id.get(bulan_en, bulan_en)
+        return f"{int(h['day'])} {bulan_id} {h['year']} H"
+    except:
+        return "1 Muharram 1448 H"
+
+@st.cache_data(ttl=1800)
+def jadwal_sholat_cianjur():
+    try:
+        url = "https://api.aladhan.com/v1/timingsByCity"
+        params = {
+            "city": "Cianjur",
+            "country": "Indonesia",
+            "method": 20
+        }
+        r = requests.get(url, params=params, timeout=10).json()
+        t = r["data"]["timings"]
+        return {
+            "Subuh": t["Fajr"][:5],
+            "Dzuhur": t["Dhuhr"][:5],
+            "Ashar": t["Asr"][:5],
+            "Maghrib": t["Maghrib"][:5],
+            "Isya": t["Isha"][:5],
+        }
+    except:
+        return {
+            "Subuh": "04:35",
+            "Dzuhur": "11:55",
+            "Ashar": "15:15",
+            "Maghrib": "17:50",
+            "Isya": "19:00",
+        }
+
+def waktu_wib():
+    return datetime.utcnow() + timedelta(hours=7)
+
+def daftar_agenda_terdekat():
+    sekarang = waktu_wib()
+    agenda = []
+
+    tgl_selasa = tanggal_berikutnya(1)
+    mulai_selasa = datetime(tgl_selasa.year, tgl_selasa.month, tgl_selasa.day, 19, 30)
+    selesai_selasa = datetime(tgl_selasa.year, tgl_selasa.month, tgl_selasa.day, 21, 30)
+
+    if selesai_selasa < sekarang:
+        mulai_selasa += timedelta(days=7)
+        selesai_selasa += timedelta(days=7)
+
+    agenda.append({
+        "nama": "Pengajian Laki-laki Malam Rabu",
+        "mulai": mulai_selasa,
+        "selesai": selesai_selasa,
+        "pengisi": pengajian_malam_rabu[index_rotasi_rabu(mulai_selasa.date())],
+    })
+
+    tgl_senin = tanggal_berikutnya(0)
+    mulai_senin = datetime(tgl_senin.year, tgl_senin.month, tgl_senin.day, 7, 30)
+    selesai_senin = datetime(tgl_senin.year, tgl_senin.month, tgl_senin.day, 9, 0)
+
+    if selesai_senin < sekarang:
+        mulai_senin += timedelta(days=7)
+        selesai_senin += timedelta(days=7)
+
+    agenda.append({
+        "nama": "Pengajian Ibu-ibu Hari Senin",
+        "mulai": mulai_senin,
+        "selesai": selesai_senin,
+        "pengisi": pengajian_senin[index_rotasi_senin(mulai_senin.date())],
+    })
+
+    return sorted(agenda, key=lambda x: x["mulai"])
+
+def status_pengajian_terdekat():
+    sekarang = waktu_wib()
+    agenda = daftar_agenda_terdekat()
+
+    for item in agenda:
+        if item["mulai"] <= sekarang <= item["selesai"]:
+            item["target"] = item["selesai"]
+            return item, "berjalan"
+
+    for item in agenda:
+        if item["mulai"] > sekarang:
+            item["target"] = item["mulai"]
+            return item, "menunggu"
+
+    agenda[0]["target"] = agenda[0]["mulai"]
+    return agenda[0], "menunggu"
+
+kas_df = load_kas()
+pengumuman_df = load_pengumuman()
+
+wib = waktu_wib()
+tanggal_wib = wib.date()
+hijriah_text = kalender_hijriah_online(tanggal_wib)
+sholat = jadwal_sholat_cianjur()
+
+st.sidebar.title("🕌 APP AL-FALAH V11.11")
+
+mode = st.sidebar.radio("Mode Aplikasi", ["👥 Jamaah", "🔐 Admin"])
+
+if mode == "🔐 Admin":
+    menu = st.sidebar.radio(
+        "Menu Admin",
+        ["🏠 Dashboard", "💰 Input Kas", "📦 Input Kotak Amal", "📊 Laporan Kas", "👥 Pengurus DKM", "📅 Jadwal Pengajian", "📢 Pengumuman", "📲 Share WhatsApp"]
+    )
+else:
+    menu = st.sidebar.radio(
+        "Menu Jamaah",
+        ["🏠 Dashboard", "👥 Pengurus DKM", "📅 Jadwal Pengajian", "📢 Pengumuman", "📲 Share WhatsApp"]
     )
 
-    if jenis_pengumuman == "Pengajian Senenan":
-        pengisi = st.selectbox("Pengisi", ["Aang Deden Kasyful Anwar", "Ustadz Ihin", "Ustadz Nanang"])
-        pesan = buat_pesan_senenan(pengisi)
-        target = df[(df["JenisKelamin"] == "Perempuan") & (df["Aktif"] == "Ya")]
+if menu == "🏠 Dashboard":
 
-    elif jenis_pengumuman == "Pengajian Malam Rabu":
-        pengisi = st.selectbox("Pengisi", ["Ustadz Ihin", "Ustadz Nanang", "Ustadz Jujun", "Aang Deden Kasyful Anwar"])
-        pesan = buat_pesan_malam_rabu(pengisi)
-        target = df[(df["JenisKelamin"] == "Laki-laki") & (df["Aktif"] == "Ya")]
+    if os.path.exists(BANNER_FILE):
+        st.image(BANNER_FILE, use_container_width=True)
 
-        if pengisi == "Aang Deden Kasyful Anwar":
-            khusus = df[df["Nama"].str.lower().str.contains("aang deden", na=False)]
-            target = pd.concat([target, khusus]).drop_duplicates(subset=["NoWA"])
+    st.markdown("""
+    <style>
+    @keyframes glowPulse {
+        0% { text-shadow:0 0 6px #FFD700,0 0 12px #FFD700; }
+        50% { text-shadow:0 0 15px #FFD700,0 0 35px #FFD700,0 0 65px #00ff99; }
+        100% { text-shadow:0 0 6px #FFD700,0 0 12px #FFD700; }
+    }
 
+    @keyframes lampBlink {
+        0%,100% { opacity:1; box-shadow:0 0 20px #FFD700; }
+        50% { opacity:.35; box-shadow:0 0 4px #FFD700; }
+    }
+
+    @keyframes borderGlow {
+        0% { box-shadow:0 0 18px rgba(255,215,0,.45); }
+        50% { box-shadow:0 0 40px rgba(255,215,0,.95), 0 0 70px rgba(0,255,120,.25); }
+        100% { box-shadow:0 0 18px rgba(255,215,0,.45); }
+    }
+
+    .premium-hero {
+        background:
+        radial-gradient(circle at top left, rgba(255,215,0,.22), transparent 30%),
+        radial-gradient(circle at top right, rgba(0,255,120,.18), transparent 35%),
+        linear-gradient(135deg,#011c16,#064e3b,#022c22);
+        padding:38px;
+        border-radius:30px;
+        text-align:center;
+        border:2px solid #FFD700;
+        margin-bottom:24px;
+        animation:borderGlow 3s infinite;
+    }
+
+    .premium-title {
+        color:#FFD700;
+        font-size:56px;
+        font-weight:950;
+        animation:glowPulse 2.4s infinite;
+        margin-bottom:8px;
+    }
+
+    .premium-subtitle {
+        color:#fef9c3;
+        font-size:24px;
+        font-weight:800;
+    }
+
+    .premium-address {
+        color:#ecfdf5;
+        font-size:17px;
+        margin-top:10px;
+    }
+
+    .lamp {
+        display:inline-block;
+        width:14px;
+        height:14px;
+        margin:0 7px;
+        border-radius:50%;
+        background:#FFD700;
+        animation:lampBlink 1.3s infinite;
+    }
+
+    .premium-chip {
+        background:#020617;
+        color:#00ff66;
+        display:inline-block;
+        padding:13px 20px;
+        border-radius:16px;
+        border:2px solid #FFD700;
+        margin-top:18px;
+        font-size:19px;
+        font-weight:900;
+        box-shadow:0 0 18px rgba(255,215,0,.7);
+    }
+
+    .led-box {
+        background:#020617;
+        border:3px solid #FFD700;
+        border-radius:18px;
+        padding:13px;
+        margin-bottom:22px;
+        box-shadow:0 0 22px rgba(255,215,0,.75), inset 0 0 20px rgba(0,255,102,.18);
+    }
+
+    .led-text {
+        color:#00ff66;
+        font-size:23px;
+        font-weight:950;
+        letter-spacing:1px;
+        text-shadow:0 0 6px #00ff66,0 0 14px #00ff66,0 0 28px #00ff66;
+    }
+
+    .prayer-card {
+        background:linear-gradient(135deg,#022c22,#064e3b);
+        color:white;
+        border:2px solid #FFD700;
+        border-radius:18px;
+        padding:18px;
+        text-align:center;
+        box-shadow:0 0 18px rgba(255,215,0,.35);
+        margin-bottom:12px;
+    }
+
+    .prayer-time {
+        color:#00ff66;
+        font-size:28px;
+        font-weight:950;
+        text-shadow:0 0 10px #00ff66;
+    }
+
+    .wa-button {
+        display:block;
+        background:linear-gradient(135deg,#16a34a,#22c55e);
+        color:white !important;
+        padding:16px;
+        border-radius:18px;
+        text-align:center;
+        font-size:22px;
+        font-weight:900;
+        text-decoration:none;
+        box-shadow:0 0 18px rgba(34,197,94,.45);
+        margin-top:10px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown(f"""
+    <div class="premium-hero">
+        <div>
+            <span class="lamp"></span><span class="lamp"></span><span class="lamp"></span>
+            <span class="lamp"></span><span class="lamp"></span><span class="lamp"></span>
+        </div>
+        <div class="premium-title">🕌 APP MASJID JAMI AL-FALAH</div>
+        <div class="premium-subtitle">Smart Masjid Digital • Kas • Jadwal Pengajian • Pengumuman</div>
+        <div class="premium-address">Kp. Caringin RT 005 RW 005 • Desa Sukasari • Karangtengah • Cianjur</div>
+        <div class="premium-chip">📅 {format_tanggal(tanggal_wib)} &nbsp; | &nbsp; 🌙 {hijriah_text}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    components.html("""
+    <div style="
+        background:#020617;
+        border:3px solid #FFD700;
+        color:#00ff66;
+        padding:14px;
+        border-radius:18px;
+        text-align:center;
+        font-size:34px;
+        font-weight:950;
+        box-shadow:0 0 25px rgba(255,215,0,.8), inset 0 0 22px rgba(0,255,102,.18);
+        margin-bottom:18px;
+        font-family:Arial;
+    ">
+        🕒 <span id="jam"></span> WIB
+    </div>
+
+    <script>
+    function updateClock(){
+        const now = new Date();
+        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const wib = new Date(utc + (7 * 60 * 60 * 1000));
+        let h = String(wib.getHours()).padStart(2,'0');
+        let m = String(wib.getMinutes()).padStart(2,'0');
+        let s = String(wib.getSeconds()).padStart(2,'0');
+        document.getElementById("jam").innerHTML = h + ":" + m + ":" + s;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+    </script>
+    """, height=95)
+
+    running_text = "📢 Selamat datang di APP MASJID JAMI AL-FALAH | Jadwal pengajian, kas masjid, pengurus dan pengumuman dapat dilihat langsung di dashboard ini."
+    if not pengumuman_df.empty:
+        terakhir = pengumuman_df.tail(1).iloc[0]
+        running_text = f"📢 Pengumuman Terbaru: {terakhir['Judul']} - {terakhir['Isi']}"
+
+    st.markdown(f"""
+    <div class="led-box">
+        <marquee scrollamount="7" class="led-text">{running_text}</marquee>
+    </div>
+    """, unsafe_allow_html=True)
+
+    agenda_status, status_pengajian = status_pengajian_terdekat()
+    target_js = agenda_status["target"].strftime("%Y-%m-%dT%H:%M:%S")
+
+    if status_pengajian == "berjalan":
+        judul_countdown = "🟢 Pengajian Sedang Berjalan"
+        teks_target = "Berakhir dalam:"
+        waktu_tampil = agenda_status["selesai"]
     else:
-        pesan = buat_pesan_syahriahan()
-        target = df[df["Aktif"].isin(["Ya", "Khusus"])]
+        judul_countdown = "⏳ Pengajian Terdekat"
+        teks_target = "Dimulai dalam:"
+        waktu_tampil = agenda_status["mulai"]
 
-    st.markdown("### Isi Pesan")
-    st.text_area("Pesan siap kirim", value=pesan, height=260)
+    st.markdown("## ⏳ Status Pengajian Terdekat")
+    components.html(f"""
+    <div style="
+        background:linear-gradient(135deg,#020617,#064e3b);
+        border:3px solid #FFD700;
+        border-radius:20px;
+        padding:22px;
+        text-align:center;
+        color:white;
+        box-shadow:0 0 22px rgba(255,215,0,.65);
+        font-family:Arial;
+    ">
+        <div style="font-size:24px;font-weight:bold;color:#FFD700;">{judul_countdown}</div>
+        <div style="font-size:23px;font-weight:bold;color:#00ff66;margin-top:8px;">{agenda_status['nama']}</div>
+        <div style="font-size:18px;margin-top:6px;">{format_tanggal(waktu_tampil.date())} - {waktu_tampil.strftime('%H:%M')} WIB</div>
+        <div style="font-size:16px;margin-top:5px;">👳 Pengisi: {agenda_status['pengisi']}</div>
+        <div style="font-size:18px;margin-top:12px;color:#fef3c7;">{teks_target}</div>
+        <div id="countdown" style="font-size:36px;font-weight:900;color:#00ff66;margin-top:6px;text-shadow:0 0 12px #00ff66;"></div>
+    </div>
+    <script>
+    const target = new Date("{target_js}+07:00").getTime();
+    function updateCountdown(){{
+        const now = new Date().getTime();
+        let diff = target - now;
+        if(diff < 0){{
+            location.reload();
+            return;
+        }}
+        const days = Math.floor(diff / (1000*60*60*24));
+        const hours = Math.floor((diff % (1000*60*60*24)) / (1000*60*60));
+        const minutes = Math.floor((diff % (1000*60*60)) / (1000*60));
+        const seconds = Math.floor((diff % (1000*60)) / 1000);
+        document.getElementById("countdown").innerHTML =
+            days + " Hari  " + hours + " Jam  " + minutes + " Menit  " + seconds + " Detik";
+    }}
+    setInterval(updateCountdown, 1000);
+    updateCountdown();
+    </script>
+    """, height=215)
 
-    st.markdown(f"### Target Penerima: {len(target)} Jamaah")
-    st.dataframe(target[["Nama", "JenisKelamin", "NoWA", "Aktif"]], use_container_width=True)
+    st.divider()
 
-    st.warning("Untuk saat ini WhatsApp masih dibuka satu per satu agar aman dan tidak dianggap spam.")
+    pemasukan = kas_df[kas_df["Jenis"] == "Pemasukan"]["Jumlah"].sum()
+    pengeluaran = kas_df[kas_df["Jenis"] == "Pengeluaran"]["Jumlah"].sum()
+    saldo = pemasukan - pengeluaran
+    total_kotak_amal = kas_df[kas_df["Kategori"] == "Kotak Amal"]["Jumlah"].sum()
+    jumlah_buka_kotak = len(kas_df[kas_df["Kategori"] == "Kotak Amal"])
 
-    for _, row in target.iterrows():
-        st.link_button(
-            f"📱 Kirim ke {row['Nama']}",
-            link_wa(row["NoWA"], pesan),
-            use_container_width=True
-        )
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("💰 Saldo Kas", rupiah(saldo))
+    c2.metric("⬆️ Total Pemasukan", rupiah(pemasukan))
+    c3.metric("⬇️ Total Pengeluaran", rupiah(pengeluaran))
+    c4.metric("📦 Total Kotak Amal", rupiah(total_kotak_amal))
 
-# =========================
-# ADMIN
-# =========================
+    c5, c6, c7, c8 = st.columns(4)
+    c5.metric("📦 Buka Kotak Amal", f"{jumlah_buka_kotak} kali")
+    c6.metric("👥 Pengurus", sum(len(v) for v in pengurus.values()))
+    c7.metric("📢 Pengumuman", len(pengumuman_df))
+    c8.metric("📅 Agenda Tetap", len(agenda_tetap))
 
-elif menu == "🔐 Admin Bendahara":
-    st.markdown("## 🔐 Admin Bendahara")
+    st.divider()
 
-    password = st.text_input("Password Admin", type="password")
+    tgl_rabu = tanggal_berikutnya(1)
+    ustadz_rabu = pengajian_malam_rabu[index_rotasi_rabu(tgl_rabu)]
+    tgl_senin = tanggal_berikutnya(0)
+    ustadz_senin = pengajian_senin[index_rotasi_senin(tgl_senin)]
 
-    if password == ADMIN_PASSWORD:
-        st.success("Login berhasil.")
+    st.markdown("## 📌 Jadwal Pengajian Minggu Ini")
+    a, b = st.columns(2)
 
-        tab1, tab2 = st.tabs(["➕ Input Kas", "📊 Data Kas"])
+    with a:
+        st.markdown(f"""
+        <div style="background:#f0fdf4;border:1px solid #22c55e;padding:24px;border-radius:22px;box-shadow:0 6px 18px rgba(0,0,0,.10);">
+            <h3>📖 Pengajian Laki-laki Malam Rabu</h3>
+            <p><b>📅 Tanggal:</b> {format_tanggal(tgl_rabu)}</p>
+            <p><b>🕢 Waktu:</b> 19:30 - 21:30 WIB</p>
+            <p><b>👳 Pengisi:</b> {ustadz_rabu}</p>
+            <p style="font-size:14px;color:#374151;">Catatan: Jika ustadz tidak berhalangan. Jika berhalangan, akan diganti oleh ustadz lain.</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-        with tab1:
-            tanggal_input = st.date_input("Tanggal Transaksi")
-            bulan = st.text_input("Bulan Laporan", value=datetime.now().strftime("%B %Y"))
-            jenis = st.selectbox("Jenis Transaksi", ["Pemasukan", "Pengeluaran"])
-            kategori = st.selectbox(
-                "Kategori",
-                ["Kotak Amal", "Infaq Jumat", "Sedekah Jamaah", "Donasi Pembangunan",
-                 "Operasional Masjid", "Listrik / Air", "Kebersihan", "Kegiatan Keagamaan",
-                 "Pembangunan", "Perlengkapan", "Lainnya"]
-            )
-            keterangan = st.text_area("Keterangan")
-            jumlah = st.number_input("Jumlah", min_value=0, step=500)
+    with b:
+        st.markdown(f"""
+        <div style="background:#fffbeb;border:1px solid #f59e0b;padding:24px;border-radius:22px;box-shadow:0 6px 18px rgba(0,0,0,.10);">
+            <h3>🌸 Pengajian Ibu-ibu Hari Senin</h3>
+            <p><b>📅 Tanggal:</b> {format_tanggal(tgl_senin)}</p>
+            <p><b>🕢 Waktu:</b> 07:30 - 09:00 WIB</p>
+            <p><b>👳 Pengisi:</b> {ustadz_senin}</p>
+            <p style="font-size:14px;color:#374151;">Catatan: Jika ustadz tidak berhalangan. Jika berhalangan, akan diganti oleh ustadz lain.</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-            if st.button("💾 SIMPAN TRANSAKSI"):
-                if jumlah <= 0:
-                    st.warning("Jumlah harus lebih dari 0.")
-                else:
-                    simpan_transaksi(
-                        tanggal_input.strftime("%d-%m-%Y"),
-                        bulan,
-                        jenis,
-                        kategori,
-                        keterangan,
-                        jumlah
-                    )
-                    st.success("Transaksi berhasil disimpan.")
-                    st.rerun()
+    st.markdown("""
+    <div style="background:#eff6ff;border:1px solid #3b82f6;padding:22px;border-radius:22px;margin-top:18px;box-shadow:0 6px 18px rgba(0,0,0,.10);">
+        <h3>🌙 Syahriahan Sholawat</h3>
+        <p><b>Waktu:</b> Malam Jumat awal bulan Hijriah, pukul 20:00 - 21:30 WIB</p>
+        <p><b>Pengisi:</b> Aang Deden Kasyful Anwar</p>
+        <p style="font-size:14px;color:#374151;">Catatan: Jika tidak berhalangan. Jika berhalangan, akan diganti oleh ustadz lain.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-        with tab2:
-            df = baca_kas()
-            st.dataframe(df, use_container_width=True)
+    st.divider()
 
-    elif password:
-        st.error("Password salah.")
+    st.subheader("📞 Hubungi Pengurus DKM")
+    teks_wa_admin = "Assalamu'alaikum, saya ingin menghubungi pengurus DKM Masjid Jami Al-Falah."
+    st.markdown(f"<a class='wa-button' href='{wa_link(teks_wa_admin)}' target='_blank'>📲 Hubungi DKM via WhatsApp</a>", unsafe_allow_html=True)
 
-st.divider()
-st.caption("Al-Falah Digital V12 | Masjid Jami Al-Falah | Transparansi, Amanah, dan Kemakmuran Masjid")
+    st.divider()
+
+    st.subheader("📋 Transaksi Kas Terbaru")
+    if kas_df.empty:
+        st.info("Belum ada data kas.")
+    else:
+        tampil = kas_df.tail(7).copy()
+        tampil["Jumlah"] = tampil["Jumlah"].apply(rupiah)
+        st.dataframe(tampil, use_container_width=True)
+
+    st.divider()
+
+    st.subheader("📅 Agenda Kegiatan Masjid")
+    st.dataframe(pd.DataFrame(agenda_tetap, columns=["Kegiatan", "Hari", "Waktu"]), use_container_width=True)
+
+    st.divider()
+
+    st.subheader("👥 Pengurus Inti DKM")
+    p1, p2, p3, p4 = st.columns(4)
+    p1.info("Ketua DKM\n\nAang Deden Kasyful Anwar")
+    p2.info("Wakil Ketua\n\nIden Tazuni")
+    p3.info("Sekretaris\n\nUstadz Ihin")
+    p4.info("Bendahara\n\nAceng Abdul Roup")
+
+    st.divider()
+
+    st.subheader("📢 Pengumuman Terbaru")
+    if pengumuman_df.empty:
+        st.info("Belum ada pengumuman.")
+    else:
+        st.dataframe(pengumuman_df.tail(5), use_container_width=True)
+
+    st.divider()
+
+    st.markdown("## 🕌 Jadwal Sholat Hari Ini - Cianjur")
+    s1, s2, s3, s4, s5 = st.columns(5)
+    with s1:
+        st.markdown(f"<div class='prayer-card'><h3>Subuh</h3><div class='prayer-time'>{sholat['Subuh']}</div></div>", unsafe_allow_html=True)
+    with s2:
+        st.markdown(f"<div class='prayer-card'><h3>Dzuhur</h3><div class='prayer-time'>{sholat['Dzuhur']}</div></div>", unsafe_allow_html=True)
+    with s3:
+        st.markdown(f"<div class='prayer-card'><h3>Ashar</h3><div class='prayer-time'>{sholat['Ashar']}</div></div>", unsafe_allow_html=True)
+    with s4:
+        st.markdown(f"<div class='prayer-card'><h3>Maghrib</h3><div class='prayer-time'>{sholat['Maghrib']}</div></div>", unsafe_allow_html=True)
+    with s5:
+        st.markdown(f"<div class='prayer-card'><h3>Isya</h3><div class='prayer-time'>{sholat['Isya']}</div></div>", unsafe_allow_html=True)
+
+elif menu == "💰 Input Kas":
+    st.subheader("💰 Input Kas Admin")
+    with st.form("form_kas"):
+        c1, c2, c3 = st.columns(3)
+        tanggal = c1.date_input("Tanggal", date.today())
+        jenis = c2.selectbox("Jenis", ["Pemasukan", "Pengeluaran"])
+        kategori = c3.selectbox("Kategori", ["Infaq Jumat", "Kotak Amal", "Donatur", "Pembangunan", "Listrik", "Kebersihan", "Lainnya"])
+        keterangan = st.text_input("Keterangan")
+        jumlah = st.number_input("Jumlah", min_value=0, step=1000)
+        petugas = st.text_input("Petugas", value="Aceng Abdul Roup")
+        simpan = st.form_submit_button("💾 Simpan Kas")
+    if simpan:
+        data = pd.DataFrame([{"Tanggal": str(tanggal), "Jenis": jenis, "Kategori": kategori, "Keterangan": keterangan, "Jumlah": jumlah, "Petugas": petugas}])
+        kas_df = pd.concat([kas_df, data], ignore_index=True)
+        save_kas(kas_df)
+        kirim_telegram(f"🕌 APP MASJID JAMI AL-FALAH\n\nData Kas Baru\nJenis: {jenis}\nKategori: {kategori}\nTanggal: {tanggal}\nJumlah: {rupiah(jumlah)}\nPetugas: {petugas}\nKeterangan: {keterangan}")
+        st.success("Data kas berhasil disimpan.")
+
+elif menu == "📦 Input Kotak Amal":
+    st.subheader("📦 Input Kotak Amal Admin")
+    with st.form("form_kotak"):
+        tanggal = st.date_input("Tanggal Buka Kotak Amal", date.today())
+        jumlah = st.number_input("Jumlah Kotak Amal", min_value=0, step=1000)
+        keterangan = st.text_input("Keterangan", value="Kotak amal masjid")
+        petugas = st.text_input("Petugas Penghitung", value="Aceng Abdul Roup")
+        simpan = st.form_submit_button("💾 Simpan Kotak Amal")
+    if simpan:
+        data = pd.DataFrame([{"Tanggal": str(tanggal), "Jenis": "Pemasukan", "Kategori": "Kotak Amal", "Keterangan": keterangan, "Jumlah": jumlah, "Petugas": petugas}])
+        kas_df = pd.concat([kas_df, data], ignore_index=True)
+        save_kas(kas_df)
+        kirim_telegram(f"🕌 APP MASJID JAMI AL-FALAH\n\nPemasukan Kotak Amal\nTanggal: {tanggal}\nJumlah: {rupiah(jumlah)}\nPetugas: {petugas}\nKeterangan: {keterangan}")
+        st.success("Kotak amal berhasil disimpan.")
+
+elif menu == "📊 Laporan Kas":
+    st.subheader("📊 Laporan Kas Masjid")
+    if kas_df.empty:
+        st.info("Belum ada data kas.")
+    else:
+        kas_df["Tanggal"] = pd.to_datetime(kas_df["Tanggal"], errors="coerce")
+        daftar_bulan = sorted(kas_df["Tanggal"].dropna().dt.strftime("%Y-%m").unique(), reverse=True)
+        bulan = st.selectbox("Pilih Bulan", daftar_bulan)
+        laporan = kas_df[kas_df["Tanggal"].dt.strftime("%Y-%m") == bulan]
+        pemasukan_bulan = laporan[laporan["Jenis"] == "Pemasukan"]["Jumlah"].sum()
+        pengeluaran_bulan = laporan[laporan["Jenis"] == "Pengeluaran"]["Jumlah"].sum()
+        saldo_bulan = pemasukan_bulan - pengeluaran_bulan
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Pemasukan Bulan Ini", rupiah(pemasukan_bulan))
+        c2.metric("Pengeluaran Bulan Ini", rupiah(pengeluaran_bulan))
+        c3.metric("Saldo Bulan Ini", rupiah(saldo_bulan))
+        tampil = laporan.copy()
+        tampil["Jumlah"] = tampil["Jumlah"].apply(rupiah)
+        st.dataframe(tampil, use_container_width=True)
+        csv = laporan.to_csv(index=False).encode("utf-8")
+        st.download_button("⬇️ Download Laporan CSV", csv, f"laporan_kas_{bulan}.csv", "text/csv")
+
+elif menu == "👥 Pengurus DKM":
+    st.subheader("👥 Struktur Pengurus DKM")
+    for jabatan, daftar_nama in pengurus.items():
+        with st.expander(jabatan, expanded=jabatan in ["Ketua DKM", "Wakil Ketua", "Sekretaris", "Bendahara"]):
+            for nama in daftar_nama:
+                st.write(f"- {nama}")
+
+elif menu == "📅 Jadwal Pengajian":
+    st.subheader("📅 Jadwal Pengajian Lengkap")
+    df_jadwal = pd.DataFrame([
+        ["Pengajian Laki-laki Malam Rabu", "Malam Rabu", "19:30 - 21:30 WIB", "Ihin → Nanang → Jujun → Aang Deden"],
+        ["Pengajian Ibu-ibu Hari Senin", "Senin", "07:30 - 09:00 WIB", "Nanang → Aang Deden → Ihin → Ihin"],
+        ["Syahriahan Sholawat", "Malam Jumat awal bulan Hijriah", "20:00 - 21:30 WIB", "Aang Deden Kasyful Anwar"]
+    ], columns=["Kegiatan", "Hari", "Waktu", "Rotasi/Pengisi"])
+    st.dataframe(df_jadwal, use_container_width=True)
+
+elif menu == "📢 Pengumuman":
+    st.subheader("📢 Buat Pengumuman")
+    with st.form("form_pengumuman"):
+        judul = st.text_input("Judul Pengumuman")
+        isi = st.text_area("Isi Pengumuman")
+        simpan = st.form_submit_button("💾 Simpan Pengumuman")
+    if simpan:
+        data = pd.DataFrame([{"Tanggal": str(date.today()), "Judul": judul, "Isi": isi}])
+        pengumuman_df = pd.concat([pengumuman_df, data], ignore_index=True)
+        save_pengumuman(pengumuman_df)
+        st.success("Pengumuman berhasil disimpan.")
+    if not pengumuman_df.empty:
+        st.dataframe(pengumuman_df, use_container_width=True)
+
+elif menu == "📲 Share WhatsApp":
+    st.subheader("📲 Share ke WhatsApp")
+    teks = st.text_area("Teks yang akan dibagikan", value="""Assalamu'alaikum Warahmatullahi Wabarakatuh
+
+Pengumuman Masjid Jami Al-Falah
+Kp. Caringin
+
+Insya Allah akan dilaksanakan kegiatan di Masjid Jami Al-Falah.
+
+Mohon kehadiran dan partisipasinya.
+
+Jazakumullahu khairan.
+""")
+    st.markdown(f"[📤 Bagikan ke WhatsApp]({wa_link(teks)})")
+    st.code(teks)
