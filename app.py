@@ -101,10 +101,7 @@ def kirim_telegram(pesan):
 def tanggal_berikutnya(target_weekday):
     hari_ini = date.today()
     selisih = (target_weekday - hari_ini.weekday()) % 7
-    if selisih == 0:
-        selisih = 7
     return hari_ini + timedelta(days=selisih)
-
 def index_rotasi_rabu(tgl_rabu):
     start = date(2026, 6, 17)
     return ((tgl_rabu - start).days // 7) % 4
