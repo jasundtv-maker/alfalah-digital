@@ -176,16 +176,15 @@ def jadwal_sholat_cianjur():
 
 def next_pengajian_datetime():
     sekarang = datetime.now(timezone.utc) + timedelta(hours=7)
-    tgl_rabu = tanggal_berikutnya(2)
-    dt_rabu = datetime(tgl_rabu.year, tgl_rabu.month, tgl_rabu.day, 19, 30)
+    tgl_selasa = tanggal_berikutnya(1)
+    dt_selasa = datetime(tgl_selasa.year, tgl_selasa.month, tgl_selasa.day, 19, 30)
 
     tgl_senin = tanggal_berikutnya(0)
     dt_senin = datetime(tgl_senin.year, tgl_senin.month, tgl_senin.day, 7, 30)
 
-    if dt_rabu < dt_senin:
-        return "Pengajian Laki-laki Malam Rabu", dt_rabu
+    if dt_selasa < dt_senin:
+        return "Pengajian Laki-laki Malam Selasa", dt_selasa
     return "Pengajian Ibu-ibu Hari Senin", dt_senin
-
 kas_df = load_kas()
 pengumuman_df = load_pengumuman()
 
