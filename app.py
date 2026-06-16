@@ -6,7 +6,7 @@ import os
 import urllib.parse
 import requests
 
-st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V11", page_icon="🕌", layout="wide")
+st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V11.11", page_icon="🕌", layout="wide")
 
 KAS_FILE = "kas_masjid.csv"
 PENGUMUMAN_FILE = "pengumuman.csv"
@@ -103,7 +103,7 @@ def tanggal_berikutnya(target_weekday):
     selisih = (target_weekday - hari_ini.weekday()) % 7
     return hari_ini + timedelta(days=selisih)
 def index_rotasi_rabu(tgl_rabu):
-    start = date(2026, 6, 17)
+    start = date(2026, 6, 16)
     return ((tgl_rabu - start).days // 7) % 4
 
 def index_rotasi_senin(tgl_senin):
@@ -171,17 +171,64 @@ def jadwal_sholat_cianjur():
             "Isya": "19:00",
         }
 
-def next_pengajian_datetime():
+def daftar_agenda_terdekat():
     sekarang = datetime.now(timezone.utc) + timedelta(hours=7)
+    agenda = []
+
+    # Pengajian laki-laki Malam Rabu, pelaksanaan Selasa malam
     tgl_selasa = tanggal_berikutnya(1)
-    dt_selasa = datetime(tgl_selasa.year, tgl_selasa.month, tgl_selasa.day, 19, 30)
+    mulai_selasa = datetime(tgl_selasa.year, tgl_selasa.month, tgl_selasa.day, 19, 30)
+    selesai_selasa = datetime(tgl_selasa.year, tgl_selasa.month, tgl_selasa.day, 21, 30)
+    if selesai_selasa < sekarang:
+        mulai_selasa += timedelta(days=7)
+        selesai_selasa += timedelta(days=7)
+    agenda.append({
+        "nama": "Pengajian Laki-laki Malam Rabu",
+        "mulai": mulai_selasa,
+        "selesai": selesai_selasa,
+        "pengisi": pengajian_malam_rabu[index_rotasi_rabu(mulai_selasa.date())],
+    })
 
+    # Pengajian ibu-ibu Hari Senin
     tgl_senin = tanggal_berikutnya(0)
-    dt_senin = datetime(tgl_senin.year, tgl_senin.month, tgl_senin.day, 7, 30)
+    mulai_senin = datetime(tgl_senin.year, tgl_senin.month, tgl_senin.day, 7, 30)
+    selesai_senin = datetime(tgl_senin.year, tgl_senin.month, tgl_senin.day, 9, 0)
+    if selesai_senin < sekarang:
+        mulai_senin += timedelta(days=7)
+        selesai_senin += timedelta(days=7)
+    agenda.append({
+        "nama": "Pengajian Ibu-ibu Hari Senin",
+        "mulai": mulai_senin,
+        "selesai": selesai_senin,
+        "pengisi": pengajian_senin[index_rotasi_senin(mulai_senin.date())],
+    })
 
-    if dt_selasa < dt_senin:
-        return "Pengajian Laki-laki Malam Selasa", dt_selasa
-    return "Pengajian Ibu-ibu Hari Senin", dt_senin
+    return sorted(agenda, key=lambda x: x["mulai"])
+
+
+def status_pengajian_terdekat():
+    sekarang = datetime.now(timezone.utc) + timedelta(hours=7)
+    agenda = daftar_agenda_terdekat()
+
+    for item in agenda:
+        if item["mulai"] <= sekarang <= item["selesai"]:
+            item["target"] = item["selesai"]
+            return item, "berjalan"
+
+    for item in agenda:
+        if item["mulai"] > sekarang:
+            item["target"] = item["mulai"]
+            return item, "menunggu"
+
+    agenda[0]["target"] = agenda[0]["mulai"]
+    return agenda[0], "menunggu"
+
+
+def next_pengajian_datetime():
+    agenda, status = status_pengajian_terdekat()
+    if status == "berjalan":
+        return "🟢 Pengajian Sedang Berjalan", agenda["target"]
+    return agenda["nama"], agenda["target"]
 kas_df = load_kas()
 pengumuman_df = load_pengumuman()
 
@@ -190,7 +237,7 @@ tanggal_wib = wib.date()
 hijriah_text = kalender_hijriah_online(tanggal_wib)
 sholat = jadwal_sholat_cianjur()
 
-st.sidebar.title("🕌 APP AL-FALAH V11")
+st.sidebar.title("🕌 APP AL-FALAH V11.11")
 
 mode = st.sidebar.radio("Mode Aplikasi", ["👥 Jamaah", "🔐 Admin"])
 
@@ -392,25 +439,19 @@ if menu == "🏠 Dashboard":
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("## 🕌 Jadwal Sholat Hari Ini - Cianjur")
-    s1, s2, s3, s4, s5 = st.columns(5)
-    with s1:
-        st.markdown(f"<div class='prayer-card'><h3>Subuh</h3><div class='prayer-time'>{sholat['Subuh']}</div></div>", unsafe_allow_html=True)
-    with s2:
-        st.markdown(f"<div class='prayer-card'><h3>Dzuhur</h3><div class='prayer-time'>{sholat['Dzuhur']}</div></div>", unsafe_allow_html=True)
-    with s3:
-        st.markdown(f"<div class='prayer-card'><h3>Ashar</h3><div class='prayer-time'>{sholat['Ashar']}</div></div>", unsafe_allow_html=True)
-    with s4:
-        st.markdown(f"<div class='prayer-card'><h3>Maghrib</h3><div class='prayer-time'>{sholat['Maghrib']}</div></div>", unsafe_allow_html=True)
-    with s5:
-        st.markdown(f"<div class='prayer-card'><h3>Isya</h3><div class='prayer-time'>{sholat['Isya']}</div></div>", unsafe_allow_html=True)
+    agenda_status, status_pengajian = status_pengajian_terdekat()
+    target_js = agenda_status["target"].strftime("%Y-%m-%dT%H:%M:%S")
 
-    st.divider()
+    if status_pengajian == "berjalan":
+        judul_countdown = "🟢 Pengajian Sedang Berjalan"
+        teks_target = "Berakhir dalam:"
+        waktu_tampil = agenda_status["selesai"]
+    else:
+        judul_countdown = "⏳ Pengajian Terdekat"
+        teks_target = "Dimulai dalam:"
+        waktu_tampil = agenda_status["mulai"]
 
-    nama_next, dt_next = next_pengajian_datetime()
-    target_js = dt_next.strftime("%Y-%m-%dT%H:%M:%S")
-
-    st.markdown("## ⏳ Hitung Mundur Pengajian Terdekat")
+    st.markdown("## ⏳ Status Pengajian Terdekat")
     components.html(f"""
     <div style="
         background:linear-gradient(135deg,#020617,#064e3b);
@@ -422,16 +463,22 @@ if menu == "🏠 Dashboard":
         box-shadow:0 0 22px rgba(255,215,0,.65);
         font-family:Arial;
     ">
-        <div style="font-size:24px;font-weight:bold;color:#FFD700;">{nama_next}</div>
-        <div style="font-size:18px;margin-top:6px;">{format_tanggal(dt_next.date())} - {dt_next.strftime("%H:%M")} WIB</div>
-        <div id="countdown" style="font-size:36px;font-weight:900;color:#00ff66;margin-top:12px;text-shadow:0 0 12px #00ff66;"></div>
+        <div style="font-size:24px;font-weight:bold;color:#FFD700;">{judul_countdown}</div>
+        <div style="font-size:23px;font-weight:bold;color:#00ff66;margin-top:8px;">{agenda_status['nama']}</div>
+        <div style="font-size:18px;margin-top:6px;">{format_tanggal(waktu_tampil.date())} - {waktu_tampil.strftime('%H:%M')} WIB</div>
+        <div style="font-size:16px;margin-top:5px;">👳 Pengisi: {agenda_status['pengisi']}</div>
+        <div style="font-size:18px;margin-top:12px;color:#fef3c7;">{teks_target}</div>
+        <div id="countdown" style="font-size:36px;font-weight:900;color:#00ff66;margin-top:6px;text-shadow:0 0 12px #00ff66;"></div>
     </div>
     <script>
     const target = new Date("{target_js}+07:00").getTime();
     function updateCountdown(){{
         const now = new Date().getTime();
         let diff = target - now;
-        if(diff < 0) diff = 0;
+        if(diff < 0){{
+            location.reload();
+            return;
+        }}
         const days = Math.floor(diff / (1000*60*60*24));
         const hours = Math.floor((diff % (1000*60*60*24)) / (1000*60*60));
         const minutes = Math.floor((diff % (1000*60*60)) / (1000*60));
@@ -442,7 +489,7 @@ if menu == "🏠 Dashboard":
     setInterval(updateCountdown, 1000);
     updateCountdown();
     </script>
-    """, height=170)
+    """, height=215)
 
     st.divider()
 
@@ -466,7 +513,7 @@ if menu == "🏠 Dashboard":
 
     st.divider()
 
-    tgl_rabu = tanggal_berikutnya(2)
+    tgl_rabu = tanggal_berikutnya(1)
     ustadz_rabu = pengajian_malam_rabu[index_rotasi_rabu(tgl_rabu)]
     tgl_senin = tanggal_berikutnya(0)
     ustadz_senin = pengajian_senin[index_rotasi_senin(tgl_senin)]
@@ -513,20 +560,6 @@ if menu == "🏠 Dashboard":
 
     st.divider()
 
-    st.subheader("📈 Grafik Kas Bulanan")
-    if not kas_df.empty:
-        grafik = kas_df.copy()
-        grafik["Tanggal"] = pd.to_datetime(grafik["Tanggal"], errors="coerce")
-        grafik = grafik.dropna(subset=["Tanggal"])
-        grafik["Bulan"] = grafik["Tanggal"].dt.strftime("%Y-%m")
-        ringkasan = grafik.groupby(["Bulan", "Jenis"])["Jumlah"].sum().reset_index()
-        chart_data = ringkasan.pivot(index="Bulan", columns="Jenis", values="Jumlah").fillna(0)
-        st.bar_chart(chart_data)
-    else:
-        st.info("Belum ada data kas untuk grafik.")
-
-    st.divider()
-
     st.subheader("📋 Transaksi Kas Terbaru")
     if kas_df.empty:
         st.info("Belum ada data kas.")
@@ -556,6 +589,21 @@ if menu == "🏠 Dashboard":
         st.info("Belum ada pengumuman.")
     else:
         st.dataframe(pengumuman_df.tail(5), use_container_width=True)
+
+    st.divider()
+
+    st.markdown("## 🕌 Jadwal Sholat Hari Ini - Cianjur")
+    s1, s2, s3, s4, s5 = st.columns(5)
+    with s1:
+        st.markdown(f"<div class='prayer-card'><h3>Subuh</h3><div class='prayer-time'>{sholat['Subuh']}</div></div>", unsafe_allow_html=True)
+    with s2:
+        st.markdown(f"<div class='prayer-card'><h3>Dzuhur</h3><div class='prayer-time'>{sholat['Dzuhur']}</div></div>", unsafe_allow_html=True)
+    with s3:
+        st.markdown(f"<div class='prayer-card'><h3>Ashar</h3><div class='prayer-time'>{sholat['Ashar']}</div></div>", unsafe_allow_html=True)
+    with s4:
+        st.markdown(f"<div class='prayer-card'><h3>Maghrib</h3><div class='prayer-time'>{sholat['Maghrib']}</div></div>", unsafe_allow_html=True)
+    with s5:
+        st.markdown(f"<div class='prayer-card'><h3>Isya</h3><div class='prayer-time'>{sholat['Isya']}</div></div>", unsafe_allow_html=True)
 
 elif menu == "💰 Input Kas":
     st.subheader("💰 Input Kas Admin")
@@ -657,4 +705,3 @@ Jazakumullahu khairan.
 """)
     st.markdown(f"[📤 Bagikan ke WhatsApp]({wa_link(teks)})")
     st.code(teks)
-
