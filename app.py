@@ -173,32 +173,15 @@ def jadwal_sholat_cianjur():
 
 def next_pengajian_datetime():
     sekarang = datetime.now(timezone.utc) + timedelta(hours=7)
-
-    # Pengajian laki-laki
     tgl_selasa = tanggal_berikutnya(1)
-    mulai_selasa = datetime(tgl_selasa.year, tgl_selasa.month, tgl_selasa.day, 19, 30)
-    selesai_selasa = datetime(tgl_selasa.year, tgl_selasa.month, tgl_selasa.day, 21, 30)
+    dt_selasa = datetime(tgl_selasa.year, tgl_selasa.month, tgl_selasa.day, 19, 30)
 
-    # Jika sedang berlangsung
-    if mulai_selasa <= sekarang <= selesai_selasa:
-        return "🟢 Pengajian Sedang Berjalan", selesai_selasa
-
-    # Jika sudah lewat
-    if sekarang > selesai_selasa:
-        mulai_selasa += timedelta(days=7)
-
-    # Pengajian ibu-ibu
     tgl_senin = tanggal_berikutnya(0)
-    mulai_senin = datetime(tgl_senin.year, tgl_senin.month, tgl_senin.day, 7, 30)
-    selesai_senin = datetime(tgl_senin.year, tgl_senin.month, tgl_senin.day, 9, 0)
+    dt_senin = datetime(tgl_senin.year, tgl_senin.month, tgl_senin.day, 7, 30)
 
-    if sekarang > selesai_senin:
-        mulai_senin += timedelta(days=7)
-
-    if mulai_selasa < mulai_senin:
-        return "📖 Pengajian Laki-laki Malam Rabu", mulai_selasa
-
-    return "🌸 Pengajian Ibu-ibu Hari Senin", mulai_senin
+    if dt_selasa < dt_senin:
+        return "Pengajian Laki-laki Malam Selasa", dt_selasa
+    return "Pengajian Ibu-ibu Hari Senin", dt_senin
 kas_df = load_kas()
 pengumuman_df = load_pengumuman()
 
@@ -430,12 +413,8 @@ if menu == "🏠 Dashboard":
     st.markdown("## ⏳ Hitung Mundur Pengajian Terdekat")
     components.html(f"""
     <div style="
-        let diff = target - now;
-
-if(diff < 0){
-    location.reload();
-    return;
-}
+        background:linear-gradient(135deg,#020617,#064e3b);
+        border:3px solid #FFD700;
         border-radius:20px;
         padding:22px;
         text-align:center;
@@ -678,3 +657,4 @@ Jazakumullahu khairan.
 """)
     st.markdown(f"[📤 Bagikan ke WhatsApp]({wa_link(teks)})")
     st.code(teks)
+
