@@ -102,6 +102,7 @@ def tanggal_berikutnya(target_weekday):
     hari_ini = date.today()
     selisih = (target_weekday - hari_ini.weekday()) % 7
     return hari_ini + timedelta(days=selisih)
+
 def index_rotasi_rabu(tgl_rabu):
     start = date(2026, 6, 16)
     return ((tgl_rabu - start).days // 7) % 4
@@ -171,17 +172,21 @@ def jadwal_sholat_cianjur():
             "Isya": "19:00",
         }
 
+def waktu_wib():
+    return datetime.utcnow() + timedelta(hours=7)
+
 def daftar_agenda_terdekat():
-    sekarang = datetime.now(timezone.utc) + timedelta(hours=7)
+    sekarang = waktu_wib()
     agenda = []
 
-    # Pengajian laki-laki Malam Rabu, pelaksanaan Selasa malam
     tgl_selasa = tanggal_berikutnya(1)
     mulai_selasa = datetime(tgl_selasa.year, tgl_selasa.month, tgl_selasa.day, 19, 30)
     selesai_selasa = datetime(tgl_selasa.year, tgl_selasa.month, tgl_selasa.day, 21, 30)
+
     if selesai_selasa < sekarang:
         mulai_selasa += timedelta(days=7)
         selesai_selasa += timedelta(days=7)
+
     agenda.append({
         "nama": "Pengajian Laki-laki Malam Rabu",
         "mulai": mulai_selasa,
@@ -189,13 +194,14 @@ def daftar_agenda_terdekat():
         "pengisi": pengajian_malam_rabu[index_rotasi_rabu(mulai_selasa.date())],
     })
 
-    # Pengajian ibu-ibu Hari Senin
     tgl_senin = tanggal_berikutnya(0)
     mulai_senin = datetime(tgl_senin.year, tgl_senin.month, tgl_senin.day, 7, 30)
     selesai_senin = datetime(tgl_senin.year, tgl_senin.month, tgl_senin.day, 9, 0)
+
     if selesai_senin < sekarang:
         mulai_senin += timedelta(days=7)
         selesai_senin += timedelta(days=7)
+
     agenda.append({
         "nama": "Pengajian Ibu-ibu Hari Senin",
         "mulai": mulai_senin,
@@ -205,9 +211,8 @@ def daftar_agenda_terdekat():
 
     return sorted(agenda, key=lambda x: x["mulai"])
 
-
 def status_pengajian_terdekat():
-    sekarang = datetime.now(timezone.utc) + timedelta(hours=7)
+    sekarang = waktu_wib()
     agenda = daftar_agenda_terdekat()
 
     for item in agenda:
@@ -223,16 +228,10 @@ def status_pengajian_terdekat():
     agenda[0]["target"] = agenda[0]["mulai"]
     return agenda[0], "menunggu"
 
-
-def next_pengajian_datetime():
-    agenda, status = status_pengajian_terdekat()
-    if status == "berjalan":
-        return "🟢 Pengajian Sedang Berjalan", agenda["target"]
-    return agenda["nama"], agenda["target"]
 kas_df = load_kas()
 pengumuman_df = load_pengumuman()
 
-wib = datetime.now(timezone.utc) + timedelta(hours=7)
+wib = waktu_wib()
 tanggal_wib = wib.date()
 hijriah_text = kalender_hijriah_online(tanggal_wib)
 sholat = jadwal_sholat_cianjur()
@@ -390,7 +389,7 @@ if menu == "🏠 Dashboard":
             <span class="lamp"></span><span class="lamp"></span><span class="lamp"></span>
         </div>
         <div class="premium-title">🕌 APP MASJID JAMI AL-FALAH</div>
-        <div class="premium-subtitle">Smart Masjid Digital • Kas • Jadwal Sholat • Pengajian • Pengumuman</div>
+        <div class="premium-subtitle">Smart Masjid Digital • Kas • Jadwal Pengajian • Pengumuman</div>
         <div class="premium-address">Kp. Caringin RT 005 RW 005 • Desa Sukasari • Karangtengah • Cianjur</div>
         <div class="premium-chip">📅 {format_tanggal(tanggal_wib)} &nbsp; | &nbsp; 🌙 {hijriah_text}</div>
     </div>
@@ -428,7 +427,7 @@ if menu == "🏠 Dashboard":
     </script>
     """, height=95)
 
-    running_text = "📢 Selamat datang di APP MASJID JAMI AL-FALAH | Jadwal sholat, pengajian, kas masjid dan pengumuman dapat dilihat langsung di dashboard ini."
+    running_text = "📢 Selamat datang di APP MASJID JAMI AL-FALAH | Jadwal pengajian, kas masjid, pengurus dan pengumuman dapat dilihat langsung di dashboard ini."
     if not pengumuman_df.empty:
         terakhir = pengumuman_df.tail(1).iloc[0]
         running_text = f"📢 Pengumuman Terbaru: {terakhir['Judul']} - {terakhir['Isi']}"
