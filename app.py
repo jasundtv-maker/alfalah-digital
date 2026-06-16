@@ -649,7 +649,7 @@ if menu == "🏠 Dashboard":
     setInterval(updateCountdown, 1000);
     updateCountdown();
     </script>
-    """, height=215)
+    """, height=300)
 
     st.divider()
 
