@@ -97,10 +97,30 @@ def init_jamaah():
 
 def baca_kas():
     init_kas()
-    df = pd.read_csv(KAS_FILE)
-    df["jumlah"] = pd.to_numeric(df["jumlah"], errors="coerce").fillna(0)
-    return df
 
+    df = pd.read_csv(KAS_FILE)
+
+    # Ubah semua nama kolom menjadi huruf kecil
+    df.columns = [str(c).strip().lower() for c in df.columns]
+
+    # Pastikan kolom jumlah ada
+    if "jumlah" not in df.columns:
+
+        if "Jumlah" in df.columns:
+            df.rename(columns={"Jumlah": "jumlah"}, inplace=True)
+
+        elif "JUMLAH" in df.columns:
+            df.rename(columns={"JUMLAH": "jumlah"}, inplace=True)
+
+        else:
+            df["jumlah"] = 0
+
+    df["jumlah"] = pd.to_numeric(
+        df["jumlah"],
+        errors="coerce"
+    ).fillna(0)
+
+    return df
 
 def baca_jamaah():
     init_jamaah()
