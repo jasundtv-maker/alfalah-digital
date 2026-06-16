@@ -160,7 +160,6 @@ menu = st.sidebar.radio(
     "Menu Admin",
     ["🏠 Dashboard", "💰 Input Kas", "📦 Input Kotak Amal", "📊 Laporan Kas", "👥 Pengurus DKM", "📅 Jadwal Pengajian", "📢 Pengumuman", "📲 Share WhatsApp"]
 )
-
 if menu == "🏠 Dashboard":
 
     if os.path.exists(BANNER_FILE):
