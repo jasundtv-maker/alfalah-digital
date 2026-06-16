@@ -1,12 +1,12 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 from datetime import date, datetime, timedelta, timezone
 import os
 import urllib.parse
 import requests
-import math
 
-st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V8", page_icon="🕌", layout="wide")
+st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V9", page_icon="🕌", layout="wide")
 
 KAS_FILE = "kas_masjid.csv"
 PENGUMUMAN_FILE = "pengumuman.csv"
@@ -118,38 +118,44 @@ def format_tanggal(tgl):
     bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
     return f"{hari[tgl.weekday()]}, {tgl.day} {bulan[tgl.month-1]} {tgl.year}"
 
-def masehi_ke_hijriah(gdate):
-    # Kalender Hijriah perkiraan, cukup untuk tampilan dashboard
-    y, m, d = gdate.year, gdate.month, gdate.day
-    if m < 3:
-        y -= 1
-        m += 12
-    a = math.floor(y / 100)
-    b = 2 - a + math.floor(a / 4)
-    jd = math.floor(365.25 * (y + 4716)) + math.floor(30.6001 * (m + 1)) + d + b - 1524
-    islamic = jd - 1948440 + 10632
-    n = math.floor((islamic - 1) / 10631)
-    islamic = islamic - 10631 * n + 354
-    j = (math.floor((10985 - islamic) / 5316)) * (math.floor((50 * islamic) / 17719)) + (math.floor(islamic / 5670)) * (math.floor((43 * islamic) / 15238))
-    islamic = islamic - (math.floor((30 - j) / 15)) * (math.floor((17719 * j) / 50)) - (math.floor(j / 16)) * (math.floor((15238 * j) / 43)) + 29
-    hm = math.floor((24 * islamic) / 709)
-    hd = islamic - math.floor((709 * hm) / 24)
-    hy = 30 * n + j - 30
-    nama_bulan = ["Muharram", "Safar", "Rabiul Awal", "Rabiul Akhir", "Jumadil Awal", "Jumadil Akhir", "Rajab", "Sya'ban", "Ramadhan", "Syawal", "Dzulqa'dah", "Dzulhijjah"]
-    if hm < 1:
-        hm = 1
-    if hm > 12:
-        hm = 12
-    return f"{hd} {nama_bulan[hm-1]} {hy} H"
+@st.cache_data(ttl=3600)
+def kalender_hijriah_online(tgl):
+    try:
+        tanggal_api = tgl.strftime("%d-%m-%Y")
+        url = f"https://api.aladhan.com/v1/gToH/{tanggal_api}"
+        r = requests.get(url, timeout=10).json()
+        h = r["data"]["hijri"]
+
+        nama_bulan_id = {
+            "Muharram": "Muharram",
+            "Safar": "Safar",
+            "Rabīʿ al-awwal": "Rabiul Awal",
+            "Rabīʿ al-thānī": "Rabiul Akhir",
+            "Jumādá al-ūlá": "Jumadil Awal",
+            "Jumādá al-ākhirah": "Jumadil Akhir",
+            "Rajab": "Rajab",
+            "Shaʿbān": "Sya'ban",
+            "Ramaḍān": "Ramadhan",
+            "Shawwāl": "Syawal",
+            "Dhū al-Qaʿdah": "Dzulqa'dah",
+            "Dhū al-Ḥijjah": "Dzulhijjah",
+        }
+
+        bulan_en = h["month"]["en"]
+        bulan_id = nama_bulan_id.get(bulan_en, bulan_en)
+
+        return f"{int(h['day'])} {bulan_id} {h['year']} H"
+    except:
+        return "1 Muharram 1448 H"
 
 kas_df = load_kas()
 pengumuman_df = load_pengumuman()
 
 wib = datetime.now(timezone.utc) + timedelta(hours=7)
 tanggal_wib = wib.date()
-jam_wib = wib.strftime("%H:%M:%S")
+hijriah_text = kalender_hijriah_online(tanggal_wib)
 
-st.sidebar.title("🕌 APP AL-FALAH V8")
+st.sidebar.title("🕌 APP AL-FALAH V9")
 menu = st.sidebar.radio(
     "Menu Admin",
     ["🏠 Dashboard", "💰 Input Kas", "📦 Input Kotak Amal", "📊 Laporan Kas", "👥 Pengurus DKM", "📅 Jadwal Pengajian", "📢 Pengumuman", "📲 Share WhatsApp"]
@@ -245,9 +251,41 @@ if menu == "🏠 Dashboard":
         <div class="gold-title">🕌 APP MASJID JAMI AL-FALAH</div>
         <div class="hero-subtitle">Sistem Informasi, Administrasi, Kas, Pengajian dan Pengumuman Masjid</div>
         <div class="hero-address">Kp. Caringin RT 005 RW 005 • Desa Sukasari • Karangtengah • Cianjur</div>
-        <div class="clock-box">🕒 {jam_wib} WIB &nbsp; | &nbsp; 📅 {format_tanggal(tanggal_wib)} &nbsp; | &nbsp; 🌙 {masehi_ke_hijriah(tanggal_wib)}</div>
+        <div class="clock-box">📅 {format_tanggal(tanggal_wib)} &nbsp; | &nbsp; 🌙 {hijriah_text}</div>
     </div>
     """, unsafe_allow_html=True)
+
+    components.html("""
+    <div style="
+        background:#020617;
+        border:2px solid #FFD700;
+        color:#00ff66;
+        padding:12px;
+        border-radius:16px;
+        text-align:center;
+        font-size:30px;
+        font-weight:900;
+        box-shadow:0 0 18px rgba(255,215,0,.65);
+        margin-bottom:18px;
+        font-family:Arial;
+    ">
+        🕒 <span id="jam"></span> WIB
+    </div>
+
+    <script>
+    function updateClock(){
+        const now = new Date();
+        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const wib = new Date(utc + (7 * 60 * 60 * 1000));
+        let h = String(wib.getHours()).padStart(2,'0');
+        let m = String(wib.getMinutes()).padStart(2,'0');
+        let s = String(wib.getSeconds()).padStart(2,'0');
+        document.getElementById("jam").innerHTML = h + ":" + m + ":" + s;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+    </script>
+    """, height=90)
 
     running_text = "📢 Selamat datang di APP MASJID JAMI AL-FALAH | Jadwal pengajian dan informasi kas dapat dilihat langsung di dashboard ini."
     if not pengumuman_df.empty:
