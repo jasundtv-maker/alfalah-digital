@@ -6,7 +6,7 @@ import os
 import urllib.parse
 import requests
 
-st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V9", page_icon="🕌", layout="wide")
+st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V11", page_icon="🕌", layout="wide")
 
 KAS_FILE = "kas_masjid.csv"
 PENGUMUMAN_FILE = "pengumuman.csv"
@@ -143,10 +143,48 @@ def kalender_hijriah_online(tgl):
 
         bulan_en = h["month"]["en"]
         bulan_id = nama_bulan_id.get(bulan_en, bulan_en)
-
         return f"{int(h['day'])} {bulan_id} {h['year']} H"
     except:
         return "1 Muharram 1448 H"
+
+@st.cache_data(ttl=1800)
+def jadwal_sholat_cianjur():
+    try:
+        url = "https://api.aladhan.com/v1/timingsByCity"
+        params = {
+            "city": "Cianjur",
+            "country": "Indonesia",
+            "method": 20
+        }
+        r = requests.get(url, params=params, timeout=10).json()
+        t = r["data"]["timings"]
+        return {
+            "Subuh": t["Fajr"][:5],
+            "Dzuhur": t["Dhuhr"][:5],
+            "Ashar": t["Asr"][:5],
+            "Maghrib": t["Maghrib"][:5],
+            "Isya": t["Isha"][:5],
+        }
+    except:
+        return {
+            "Subuh": "04:35",
+            "Dzuhur": "11:55",
+            "Ashar": "15:15",
+            "Maghrib": "17:50",
+            "Isya": "19:00",
+        }
+
+def next_pengajian_datetime():
+    sekarang = datetime.now(timezone.utc) + timedelta(hours=7)
+    tgl_rabu = tanggal_berikutnya(2)
+    dt_rabu = datetime(tgl_rabu.year, tgl_rabu.month, tgl_rabu.day, 19, 30)
+
+    tgl_senin = tanggal_berikutnya(0)
+    dt_senin = datetime(tgl_senin.year, tgl_senin.month, tgl_senin.day, 7, 30)
+
+    if dt_rabu < dt_senin:
+        return "Pengajian Laki-laki Malam Rabu", dt_rabu
+    return "Pengajian Ibu-ibu Hari Senin", dt_senin
 
 kas_df = load_kas()
 pengumuman_df = load_pengumuman()
@@ -154,12 +192,23 @@ pengumuman_df = load_pengumuman()
 wib = datetime.now(timezone.utc) + timedelta(hours=7)
 tanggal_wib = wib.date()
 hijriah_text = kalender_hijriah_online(tanggal_wib)
+sholat = jadwal_sholat_cianjur()
 
-st.sidebar.title("🕌 APP AL-FALAH V9")
-menu = st.sidebar.radio(
-    "Menu Admin",
-    ["🏠 Dashboard", "💰 Input Kas", "📦 Input Kotak Amal", "📊 Laporan Kas", "👥 Pengurus DKM", "📅 Jadwal Pengajian", "📢 Pengumuman", "📲 Share WhatsApp"]
-)
+st.sidebar.title("🕌 APP AL-FALAH V11")
+
+mode = st.sidebar.radio("Mode Aplikasi", ["👥 Jamaah", "🔐 Admin"])
+
+if mode == "🔐 Admin":
+    menu = st.sidebar.radio(
+        "Menu Admin",
+        ["🏠 Dashboard", "💰 Input Kas", "📦 Input Kotak Amal", "📊 Laporan Kas", "👥 Pengurus DKM", "📅 Jadwal Pengajian", "📢 Pengumuman", "📲 Share WhatsApp"]
+    )
+else:
+    menu = st.sidebar.radio(
+        "Menu Jamaah",
+        ["🏠 Dashboard", "👥 Pengurus DKM", "📅 Jadwal Pengajian", "📢 Pengumuman", "📲 Share WhatsApp"]
+    )
+
 if menu == "🏠 Dashboard":
 
     if os.path.exists(BANNER_FILE):
@@ -257,13 +306,36 @@ if menu == "🏠 Dashboard":
         text-shadow:0 0 6px #00ff66,0 0 14px #00ff66,0 0 28px #00ff66;
     }
 
-    .card-premium {
-        padding:20px;
-        border-radius:20px;
-        box-shadow:0 6px 18px rgba(0,0,0,.12);
-        border:1px solid rgba(255,215,0,.35);
-        background:linear-gradient(135deg,#ffffff,#f8fafc);
-        margin-bottom:14px;
+    .prayer-card {
+        background:linear-gradient(135deg,#022c22,#064e3b);
+        color:white;
+        border:2px solid #FFD700;
+        border-radius:18px;
+        padding:18px;
+        text-align:center;
+        box-shadow:0 0 18px rgba(255,215,0,.35);
+        margin-bottom:12px;
+    }
+
+    .prayer-time {
+        color:#00ff66;
+        font-size:28px;
+        font-weight:950;
+        text-shadow:0 0 10px #00ff66;
+    }
+
+    .wa-button {
+        display:block;
+        background:linear-gradient(135deg,#16a34a,#22c55e);
+        color:white !important;
+        padding:16px;
+        border-radius:18px;
+        text-align:center;
+        font-size:22px;
+        font-weight:900;
+        text-decoration:none;
+        box-shadow:0 0 18px rgba(34,197,94,.45);
+        margin-top:10px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -275,7 +347,7 @@ if menu == "🏠 Dashboard":
             <span class="lamp"></span><span class="lamp"></span><span class="lamp"></span>
         </div>
         <div class="premium-title">🕌 APP MASJID JAMI AL-FALAH</div>
-        <div class="premium-subtitle">Sistem Informasi, Administrasi, Kas, Pengajian dan Pengumuman Masjid</div>
+        <div class="premium-subtitle">Smart Masjid Digital • Kas • Jadwal Sholat • Pengajian • Pengumuman</div>
         <div class="premium-address">Kp. Caringin RT 005 RW 005 • Desa Sukasari • Karangtengah • Cianjur</div>
         <div class="premium-chip">📅 {format_tanggal(tanggal_wib)} &nbsp; | &nbsp; 🌙 {hijriah_text}</div>
     </div>
@@ -313,7 +385,7 @@ if menu == "🏠 Dashboard":
     </script>
     """, height=95)
 
-    running_text = "📢 Selamat datang di APP MASJID JAMI AL-FALAH | Jadwal pengajian dan informasi kas dapat dilihat langsung di dashboard ini."
+    running_text = "📢 Selamat datang di APP MASJID JAMI AL-FALAH | Jadwal sholat, pengajian, kas masjid dan pengumuman dapat dilihat langsung di dashboard ini."
     if not pengumuman_df.empty:
         terakhir = pengumuman_df.tail(1).iloc[0]
         running_text = f"📢 Pengumuman Terbaru: {terakhir['Judul']} - {terakhir['Isi']}"
@@ -323,6 +395,60 @@ if menu == "🏠 Dashboard":
         <marquee scrollamount="7" class="led-text">{running_text}</marquee>
     </div>
     """, unsafe_allow_html=True)
+
+    st.markdown("## 🕌 Jadwal Sholat Hari Ini - Cianjur")
+    s1, s2, s3, s4, s5 = st.columns(5)
+    with s1:
+        st.markdown(f"<div class='prayer-card'><h3>Subuh</h3><div class='prayer-time'>{sholat['Subuh']}</div></div>", unsafe_allow_html=True)
+    with s2:
+        st.markdown(f"<div class='prayer-card'><h3>Dzuhur</h3><div class='prayer-time'>{sholat['Dzuhur']}</div></div>", unsafe_allow_html=True)
+    with s3:
+        st.markdown(f"<div class='prayer-card'><h3>Ashar</h3><div class='prayer-time'>{sholat['Ashar']}</div></div>", unsafe_allow_html=True)
+    with s4:
+        st.markdown(f"<div class='prayer-card'><h3>Maghrib</h3><div class='prayer-time'>{sholat['Maghrib']}</div></div>", unsafe_allow_html=True)
+    with s5:
+        st.markdown(f"<div class='prayer-card'><h3>Isya</h3><div class='prayer-time'>{sholat['Isya']}</div></div>", unsafe_allow_html=True)
+
+    st.divider()
+
+    nama_next, dt_next = next_pengajian_datetime()
+    target_js = dt_next.strftime("%Y-%m-%dT%H:%M:%S")
+
+    st.markdown("## ⏳ Hitung Mundur Pengajian Terdekat")
+    components.html(f"""
+    <div style="
+        background:linear-gradient(135deg,#020617,#064e3b);
+        border:3px solid #FFD700;
+        border-radius:20px;
+        padding:22px;
+        text-align:center;
+        color:white;
+        box-shadow:0 0 22px rgba(255,215,0,.65);
+        font-family:Arial;
+    ">
+        <div style="font-size:24px;font-weight:bold;color:#FFD700;">{nama_next}</div>
+        <div style="font-size:18px;margin-top:6px;">{format_tanggal(dt_next.date())} - {dt_next.strftime("%H:%M")} WIB</div>
+        <div id="countdown" style="font-size:36px;font-weight:900;color:#00ff66;margin-top:12px;text-shadow:0 0 12px #00ff66;"></div>
+    </div>
+    <script>
+    const target = new Date("{target_js}+07:00").getTime();
+    function updateCountdown(){{
+        const now = new Date().getTime();
+        let diff = target - now;
+        if(diff < 0) diff = 0;
+        const days = Math.floor(diff / (1000*60*60*24));
+        const hours = Math.floor((diff % (1000*60*60*24)) / (1000*60*60));
+        const minutes = Math.floor((diff % (1000*60*60)) / (1000*60));
+        const seconds = Math.floor((diff % (1000*60)) / 1000);
+        document.getElementById("countdown").innerHTML =
+            days + " Hari  " + hours + " Jam  " + minutes + " Menit  " + seconds + " Detik";
+    }}
+    setInterval(updateCountdown, 1000);
+    updateCountdown();
+    </script>
+    """, height=170)
+
+    st.divider()
 
     pemasukan = kas_df[kas_df["Jenis"] == "Pemasukan"]["Jumlah"].sum()
     pengeluaran = kas_df[kas_df["Jenis"] == "Pengeluaran"]["Jumlah"].sum()
@@ -382,6 +508,12 @@ if menu == "🏠 Dashboard":
         <p style="font-size:14px;color:#374151;">Catatan: Jika tidak berhalangan. Jika berhalangan, akan diganti oleh ustadz lain.</p>
     </div>
     """, unsafe_allow_html=True)
+
+    st.divider()
+
+    st.subheader("📞 Hubungi Pengurus DKM")
+    teks_wa_admin = "Assalamu'alaikum, saya ingin menghubungi pengurus DKM Masjid Jami Al-Falah."
+    st.markdown(f"<a class='wa-button' href='{wa_link(teks_wa_admin)}' target='_blank'>📲 Hubungi DKM via WhatsApp</a>", unsafe_allow_html=True)
 
     st.divider()
 
