@@ -6,8 +6,11 @@ import os
 import urllib.parse
 import requests
 import base64
+import json
+import gspread
+from google.oauth2.service_account import Credentials
 
-st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V15.1", page_icon="🕌", layout="wide")
+st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V15.2", page_icon="🕌", layout="wide")
 
 KAS_FILE = "kas_masjid.csv"
 PENGUMUMAN_FILE = "pengumuman.csv"
@@ -319,7 +322,7 @@ def ambil_secret(nama, default=""):
         return os.getenv(nama, default)
 
 def kirim_fonnte(nomor, pesan):
-    token = ambil_secret("FONNTE_TOKEN", "")
+    token = ambil_secret("FONNTE_TOKEN", "") or ambil_secret("FONTE_TOKEN", "")
     if not token:
         return False, "FONNTE_TOKEN belum diisi di Streamlit Secrets"
 
@@ -345,6 +348,103 @@ def kirim_fonnte(nomor, pesan):
         return False, f"HTTP {res.status_code}: {hasil}"
     except Exception as e:
         return False, str(e)
+
+
+def ambil_service_account_info():
+    """Ambil data Service Account dari Streamlit Secrets.
+    Mendukung 3 format:
+    1) [gcp_service_account]
+    2) GOOGLE_SERVICE_ACCOUNT berisi JSON string
+    3) key service account ditaruh langsung di root Secrets
+    """
+    try:
+        if "gcp_service_account" in st.secrets:
+            return dict(st.secrets["gcp_service_account"])
+    except Exception:
+        pass
+
+    try:
+        if "GOOGLE_SERVICE_ACCOUNT" in st.secrets:
+            raw = st.secrets["GOOGLE_SERVICE_ACCOUNT"]
+            if isinstance(raw, str):
+                return json.loads(raw)
+            return dict(raw)
+    except Exception:
+        pass
+
+    # Format root-level seperti: type, project_id, private_key, client_email, dll.
+    keys = [
+        "type", "project_id", "private_key_id", "private_key",
+        "client_email", "client_id", "auth_uri", "token_uri",
+        "auth_provider_x509_cert_url", "client_x509_cert_url", "universe_domain"
+    ]
+    info = {}
+    for k in keys:
+        try:
+            if k in st.secrets:
+                info[k] = st.secrets[k]
+        except Exception:
+            pass
+
+    if "private_key" in info:
+        info["private_key"] = str(info["private_key"]).replace("\\n", "\n")
+
+    if "client_email" in info and "private_key" in info:
+        info.setdefault("type", "service_account")
+        info.setdefault("token_uri", "https://oauth2.googleapis.com/token")
+        return info
+
+    return None
+
+
+def koneksi_google_sheet_write():
+    try:
+        info = ambil_service_account_info()
+        if not info:
+            return None, "Service Account belum ditemukan di Streamlit Secrets"
+
+        scopes = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive",
+        ]
+        creds = Credentials.from_service_account_info(info, scopes=scopes)
+        client = gspread.authorize(creds)
+        return client.open_by_key(SHEET_ID), "OK"
+    except Exception as e:
+        return None, str(e)
+
+
+def simpan_log_wa(nama, nowa, jenis_pesan, status, keterangan):
+    try:
+        sh, info = koneksi_google_sheet_write()
+        if sh is None:
+            return False, info
+
+        ws = sh.worksheet("Log WA")
+        waktu = waktu_wib().strftime("%Y-%m-%d %H:%M:%S")
+        ws.append_row([
+            waktu,
+            str(nama),
+            str(nowa),
+            str(jenis_pesan),
+            str(status),
+            str(keterangan)[:500],
+        ], value_input_option="USER_ENTERED")
+        return True, "Log tersimpan"
+    except Exception as e:
+        return False, str(e)
+
+
+def baca_log_wa():
+    try:
+        sh, info = koneksi_google_sheet_write()
+        if sh is None:
+            return pd.DataFrame(columns=["Tanggal", "Nama", "NoWA", "JenisPesan", "Status", "Keterangan"])
+        ws = sh.worksheet("Log WA")
+        data = ws.get_all_records()
+        return pd.DataFrame(data)
+    except Exception:
+        return pd.DataFrame(columns=["Tanggal", "Nama", "NoWA", "JenisPesan", "Status", "Keterangan"])
 
 
 def tanggal_berikutnya(target_weekday):
@@ -490,7 +590,7 @@ tanggal_wib = wib.date()
 hijriah_text = kalender_hijriah_online(tanggal_wib)
 sholat = jadwal_sholat_cianjur()
 
-st.sidebar.title("🕌 APP AL-FALAH V15.1")
+st.sidebar.title("🕌 APP AL-FALAH V15.2")
 
 mode = st.sidebar.radio("Mode Aplikasi", ["👥 Jamaah", "🔐 Admin"])
 
@@ -996,7 +1096,7 @@ elif menu == "📲 WA Jamaah":
     st.info(f"Target: {target_label} | Jumlah: {len(target)} penerima")
     st.text_area("Isi pesan siap kirim", value=pesan, height=270)
 
-    ringkasan = f"""🕌 AL-FALAH DIGITAL V15.1
+    ringkasan = f"""🕌 AL-FALAH DIGITAL V15.2
 
 Pengumuman disiapkan:
 {jenis_info}
@@ -1025,21 +1125,43 @@ Pesan sudah tersedia di menu WA Jamaah."""
             log_hasil = []
 
             for i, (_, row) in enumerate(target.iterrows(), start=1):
-                ok, info = kirim_fonnte(row["NoWA"], pesan)
+                nama_jamaah = row["Nama"]
+                nomor_jamaah = row["NoWA"]
+
+                ok, info = kirim_fonnte(nomor_jamaah, pesan)
+                status = "Terkirim" if ok else "Gagal"
+
                 if ok:
                     sukses += 1
-                    log_hasil.append({"Nama": row["Nama"], "NoWA": row["NoWA"], "Status": "Terkirim", "Keterangan": info[:180]})
                 else:
                     gagal += 1
-                    log_hasil.append({"Nama": row["Nama"], "NoWA": row["NoWA"], "Status": "Gagal", "Keterangan": info[:180]})
+
+                ket = str(info)[:180]
+                log_ok, log_info = simpan_log_wa(nama_jamaah, nomor_jamaah, jenis_info, status, ket)
+
+                log_hasil.append({
+                    "Nama": nama_jamaah,
+                    "NoWA": nomor_jamaah,
+                    "Status": status,
+                    "Keterangan": ket,
+                    "Log WA": "Tersimpan" if log_ok else f"Gagal: {log_info}"
+                })
+
                 progress.progress(i / len(target))
 
             st.success(f"Selesai. Berhasil: {sukses} | Gagal: {gagal}")
             st.dataframe(pd.DataFrame(log_hasil), use_container_width=True)
-            kirim_telegram(f"🕌 AL-FALAH DIGITAL V15.1\n\nWA Otomatis selesai.\nJenis: {jenis_info}\nTarget: {target_label}\nBerhasil: {sukses}\nGagal: {gagal}")
+            kirim_telegram(f"🕌 AL-FALAH DIGITAL V15.2\n\nWA Otomatis selesai.\nJenis: {jenis_info}\nTarget: {target_label}\nBerhasil: {sukses}\nGagal: {gagal}")
 
     st.markdown("### Daftar Target")
     st.dataframe(target[["Nama", "JenisKelamin", "NoWA", "Aktif"]], use_container_width=True)
+
+    st.markdown("### Riwayat Log WA")
+    log_df = baca_log_wa()
+    if log_df.empty:
+        st.info("Log WA masih kosong atau belum bisa dibaca.")
+    else:
+        st.dataframe(log_df.tail(30), use_container_width=True)
 
     st.markdown("### Tombol Manual Cadangan")
     st.caption("Jika gateway sedang bermasalah, tombol manual ini masih bisa dipakai satu per satu.")
