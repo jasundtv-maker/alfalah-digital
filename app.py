@@ -11,7 +11,7 @@ import html
 import gspread
 from google.oauth2.service_account import Credentials
 
-st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V18.1", page_icon="🕌", layout="wide")
+st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V18.2", page_icon="🕌", layout="wide")
 
 KAS_FILE = "kas_masjid.csv"
 PENGUMUMAN_FILE = "pengumuman.csv"
@@ -710,7 +710,7 @@ tanggal_wib = wib.date()
 hijriah_text = kalender_hijriah_online(tanggal_wib)
 sholat = jadwal_sholat_cianjur()
 
-st.sidebar.title("🕌 APP AL-FALAH V18.1")
+st.sidebar.title("🕌 APP AL-FALAH V18.2")
 
 mode = st.sidebar.radio("Mode Aplikasi", ["👥 Jamaah", "🔐 Admin"])
 
@@ -967,7 +967,7 @@ h1, h2, h3 {
         line-height:1.55;
         text-align:center;
         text-shadow:0 0 6px #00ff66,0 0 16px #00ff66;
-        animation: naikPelan 28s linear infinite;
+        animation: naikPelan 45s linear infinite;
         white-space:normal;
     }}
     @keyframes naikPelan {{
@@ -1037,17 +1037,36 @@ h1, h2, h3 {
     total_kotak_amal = kas_df[kas_df["Kategori"] == "Kotak Amal"]["Jumlah"].sum()
     jumlah_buka_kotak = len(kas_df[kas_df["Kategori"] == "Kotak Amal"])
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("💰 Saldo Kas", rupiah(saldo))
-    c2.metric("⬆️ Total Pemasukan", rupiah(pemasukan))
-    c3.metric("⬇️ Total Pengeluaran", rupiah(pengeluaran))
-    c4.metric("📦 Total Kotak Amal", rupiah(total_kotak_amal))
+    khusus_madrasah = kas_df[kas_df["Kategori"].isin(["Kotak Amal Senenan", "Kas Madrasah"])].copy()
+    masuk_madrasah = khusus_madrasah[khusus_madrasah["Jenis"] == "Pemasukan"]["Jumlah"].sum() if not khusus_madrasah.empty else 0
+    keluar_madrasah = khusus_madrasah[khusus_madrasah["Jenis"] == "Pengeluaran"]["Jumlah"].sum() if not khusus_madrasah.empty else 0
+    saldo_madrasah = masuk_madrasah - keluar_madrasah
 
-    c5, c6, c7, c8 = st.columns(4)
-    c5.metric("📦 Buka Kotak Amal", f"{jumlah_buka_kotak} kali")
-    c6.metric("👥 Pengurus", sum(len(v) for v in pengurus.values()))
-    c7.metric("📢 Pengumuman Aktif", len(pengumuman_aktif_df))
-    c8.metric("📅 Agenda Tetap", len(agenda_tetap))
+    khusus_rajaban = kas_df[kas_df["Kategori"] == "Iuran PHBI Rajaban"].copy()
+    masuk_rajaban = khusus_rajaban[khusus_rajaban["Jenis"] == "Pemasukan"]["Jumlah"].sum() if not khusus_rajaban.empty else 0
+    keluar_rajaban = khusus_rajaban[khusus_rajaban["Jenis"] == "Pengeluaran"]["Jumlah"].sum() if not khusus_rajaban.empty else 0
+    saldo_rajaban = masuk_rajaban - keluar_rajaban
+
+    st.markdown("## 📊 Ringkasan Laporan")
+    st.caption("Dashboard dibuat ringkas. Detail laporan akan muncul jika jamaah klik judul laporan di bawah.")
+
+    def kartu_laporan(judul, saldo_akhir, warna1, warna2, ikon):
+        st.markdown(f"""
+        <div style="background:linear-gradient(135deg,{warna1},{warna2});padding:22px;border-radius:22px;color:white;box-shadow:0 8px 24px rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.35);margin-bottom:10px;">
+            <div style="font-size:17px;font-weight:900;opacity:.95;">{ikon} {judul}</div>
+            <div style="font-size:13px;margin-top:6px;opacity:.9;">Saldo akhir</div>
+            <div style="font-size:30px;font-weight:950;margin-top:2px;text-shadow:0 2px 10px rgba(0,0,0,.25);">{rupiah(saldo_akhir)}</div>
+            <div style="font-size:12px;margin-top:8px;opacity:.9;">Klik laporan di bawah untuk melihat rincian lengkap.</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    k1, k2, k3 = st.columns(3)
+    with k1:
+        kartu_laporan("Laporan Kas Masjid", saldo, "#064e3b", "#16a34a", "💰")
+    with k2:
+        kartu_laporan("Laporan Kas Madrasah", saldo_madrasah, "#1d4ed8", "#06b6d4", "🏫")
+    with k3:
+        kartu_laporan("Laporan Iuran Rajaban", saldo_rajaban, "#7c2d12", "#f97316", "🎉")
 
     st.divider()
 
@@ -1101,7 +1120,7 @@ h1, h2, h3 {
     st.markdown("## 🧭 Pusat Informasi Masjid")
     st.caption("Dashboard dibuat ringkas. Klik judul di bawah untuk membuka detail informasi.")
 
-    card1, card2, card3 = st.columns(3)
+    card1, card2, card3, card4 = st.columns(4)
     with card1:
         with st.expander("💰 Laporan Kas Masjid", expanded=False):
             st.metric("Saldo Kas", rupiah(saldo))
@@ -1115,10 +1134,10 @@ h1, h2, h3 {
                 st.info("Belum ada data kas.")
 
     with card2:
-        with st.expander("🏫 Kas Madrasah & PHBI", expanded=False):
-            khusus = kas_df[kas_df["Kategori"].isin(["Kotak Amal Senenan", "Iuran PHBI Rajaban", "Kas Madrasah"])].copy()
+        with st.expander("🏫 Laporan Kas Madrasah", expanded=False):
+            khusus = kas_df[kas_df["Kategori"].isin(["Kotak Amal Senenan", "Kas Madrasah"])].copy()
             total_khusus = khusus[khusus["Jenis"] == "Pemasukan"]["Jumlah"].sum() if not khusus.empty else 0
-            st.metric("Total Pemasukan", rupiah(total_khusus))
+            st.metric("Saldo Akhir", rupiah(total_khusus))
             if not khusus.empty:
                 khusus_tampil = khusus.tail(10).copy()
                 khusus_tampil["Jumlah"] = khusus_tampil["Jumlah"].apply(rupiah)
@@ -1126,7 +1145,21 @@ h1, h2, h3 {
             else:
                 st.info("Belum ada data kas madrasah/PHBI.")
 
+
     with card3:
+        with st.expander("🎉 Laporan Iuran Rajaban", expanded=False):
+            rajaban = kas_df[kas_df["Kategori"] == "Iuran PHBI Rajaban"].copy()
+            masuk_r = rajaban[rajaban["Jenis"] == "Pemasukan"]["Jumlah"].sum() if not rajaban.empty else 0
+            keluar_r = rajaban[rajaban["Jenis"] == "Pengeluaran"]["Jumlah"].sum() if not rajaban.empty else 0
+            st.metric("Saldo Akhir", rupiah(masuk_r - keluar_r))
+            if not rajaban.empty:
+                rajaban_tampil = rajaban.tail(10).copy()
+                rajaban_tampil["Jumlah"] = rajaban_tampil["Jumlah"].apply(rupiah)
+                st.dataframe(rajaban_tampil, use_container_width=True)
+            else:
+                st.info("Belum ada data iuran Rajaban.")
+
+    with card4:
         with st.expander("📢 Pengumuman Aktif", expanded=False):
             if pengumuman_aktif_df.empty:
                 st.info("Belum ada pengumuman aktif.")
@@ -1262,7 +1295,7 @@ Jazakumullahu khairan.
 
     st.divider()
     st.markdown("### 📊 Ringkasan Kas Madrasah & PHBI")
-    khusus = kas_df[kas_df["Kategori"].isin(["Kotak Amal Senenan", "Iuran PHBI Rajaban", "Kas Madrasah"])].copy()
+    khusus = kas_df[kas_df["Kategori"].isin(["Kotak Amal Senenan", "Kas Madrasah"])].copy()
     if khusus.empty:
         st.info("Belum ada data.")
     else:
