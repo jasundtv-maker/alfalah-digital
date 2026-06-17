@@ -43,7 +43,6 @@ def ambil_service_account_info():
     if raw:
         return json.loads(raw)
 
-    # fallback kalau key ditaruh satu-satu sebagai GitHub Secrets
     keys = [
         "type", "project_id", "private_key_id", "private_key", "client_email",
         "client_id", "auth_uri", "token_uri", "auth_provider_x509_cert_url",
@@ -72,6 +71,21 @@ def buka_sheet():
     return client.open_by_key(SHEET_ID)
 
 
+def baca_setting(sh):
+    try:
+        rows = sh.worksheet("Setting WA").get_all_records()
+        setting = {}
+        for r in rows:
+            key = str(r.get("Key", "")).strip()
+            val = str(r.get("Value", "")).strip()
+            if key:
+                setting[key] = val
+        return setting
+    except Exception as e:
+        print("Gagal membaca Setting WA:", e)
+        return {}
+
+
 def baca_jamaah(sh):
     rows = sh.worksheet("Jamaah").get_all_records()
     hasil = []
@@ -95,7 +109,6 @@ def is_khusus_aang(row):
 
 
 def target_aktif_umum(rows):
-    # Hanya Aktif=Ya. Data Khusus seperti Aang Deden tidak ikut semua pesan.
     return [r for r in rows if r.get("Aktif", "").lower() == "ya" and not is_khusus_aang(r)]
 
 
@@ -154,7 +167,12 @@ Mohon hadir tepat waktu.
 
 Jazakumullahu khairan.
 """
-        target = [r for r in rows if r["JenisKelamin"] == "Laki-laki" and r["Aktif"].lower() == "ya" and not is_khusus_aang(r)]
+        target = [
+            r for r in rows
+            if r["JenisKelamin"] == "Laki-laki"
+            and r["Aktif"].lower() == "ya"
+            and not is_khusus_aang(r)
+        ]
         target = tambah_aang_jika_pengisi(target, rows, ustadz)
         return "Pengajian Malam Rabu", pesan, target
 
@@ -184,7 +202,12 @@ Mohon hadir tepat waktu.
 
 Jazakumullahu khairan.
 """
-        target = [r for r in rows if r["JenisKelamin"] == "Perempuan" and r["Aktif"].lower() == "ya" and not is_khusus_aang(r)]
+        target = [
+            r for r in rows
+            if r["JenisKelamin"] == "Perempuan"
+            and r["Aktif"].lower() == "ya"
+            and not is_khusus_aang(r)
+        ]
         target = tambah_aang_jika_pengisi(target, rows, ustadz)
         return "Pengajian Senenan", pesan, target
 
@@ -217,7 +240,7 @@ Mohon hadir dan ajak keluarga.
 Jazakumullahu khairan.
 """
         target = target_aktif_umum(rows)
-        target = tambah_aang_jika_pengisi(target, rows, "Aang Deden")
+        target = tambah_aang_jika_pengisi(target, rows, "Aang Deden Kasyful Anwar")
         return "Syahriahan Sholawat", pesan, target
 
     raise RuntimeError(f"REMINDER_MODE tidak dikenal: {MODE}")
@@ -254,6 +277,7 @@ def simpan_log(sh, nama, nowa, jenis, status, ket):
 
 def kirim_ringkasan_telegram(text):
     if not TELEGRAM_BOT_TOKEN:
+        print("TELEGRAM_BOT_TOKEN tidak ada. Ringkasan Telegram dilewati.")
         return
     try:
         requests.post(
@@ -266,10 +290,18 @@ def kirim_ringkasan_telegram(text):
 
 
 sh = buka_sheet()
+setting = baca_setting(sh)
+wa_auto = setting.get("WA_AUTO", "OFF").strip().upper()
+print("WA_AUTO:", wa_auto)
+
+if wa_auto != "ON":
+    print("WA otomatis dinonaktifkan dari Google Sheet Setting WA.")
+    print("Ubah WA_AUTO menjadi ON jika ingin mengaktifkan WA otomatis.")
+    raise SystemExit(0)
+
 rows = baca_jamaah(sh)
 jenis, pesan, target = buat_pesan_dan_target(rows)
 
-# Hilangkan nomor duplikat
 unik = []
 seen = set()
 for r in target:
@@ -292,7 +324,7 @@ for r in target:
     simpan_log(sh, r["Nama"], r["NoWA"], f"WA Otomatis {jenis}", status, info)
     print(r["Nama"], r["NoWA"], status, str(info)[:120])
 
-ringkasan = f"""🕌 AL-FALAH DIGITAL V17
+ringkasan = f"""🕌 AL-FALAH DIGITAL V17.1
 
 WA Otomatis selesai.
 Jenis: {jenis}
@@ -302,4 +334,3 @@ Target: {len(target)}
 Waktu: {waktu_wib().strftime('%d-%m-%Y %H:%M:%S')} WIB"""
 print(ringkasan)
 kirim_ringkasan_telegram(ringkasan)
-
