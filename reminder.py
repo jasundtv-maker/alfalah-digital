@@ -69,7 +69,7 @@ if mode == "pengajian_laki":
 
 Assalamu'alaikum Warahmatullahi Wabarakatuh.
 
-Insya Allah besok malam Rabu akan dilaksanakan pengajian rutin laki-laki.
+Insya Allah malam ini akan dilaksanakan pengajian rutin laki-laki.
 
 🎙 Pengisi:
 {ustadz}
