@@ -10,7 +10,7 @@ import json
 import gspread
 from google.oauth2.service_account import Credentials
 
-st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V16", page_icon="🕌", layout="wide")
+st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V16.1", page_icon="🕌", layout="wide")
 
 KAS_FILE = "kas_masjid.csv"
 PENGUMUMAN_FILE = "pengumuman.csv"
@@ -608,7 +608,7 @@ tanggal_wib = wib.date()
 hijriah_text = kalender_hijriah_online(tanggal_wib)
 sholat = jadwal_sholat_cianjur()
 
-st.sidebar.title("🕌 APP AL-FALAH V16")
+st.sidebar.title("🕌 APP AL-FALAH V16.1")
 
 mode = st.sidebar.radio("Mode Aplikasi", ["👥 Jamaah", "🔐 Admin"])
 
@@ -819,35 +819,46 @@ h1, h2, h3 {
         running_text = f"📢 Pengumuman Terbaru: {terakhir['Judul']} - {terakhir['Isi']}"
 
     st.markdown(f"""
-<style>
-.vertical-scroll {{
-    height: 70px;
-    overflow: hidden;
-    position: relative;
-}}
+    <style>
+    .vertical-led-box {{
+        background:#020617;
+        border:3px solid #FFD700;
+        border-radius:18px;
+        padding:0;
+        height:86px;
+        overflow:hidden;
+        margin-bottom:22px;
+        box-shadow:0 0 22px rgba(255,215,0,.75), inset 0 0 20px rgba(0,255,102,.18);
+        position:relative;
+    }}
 
-.vertical-scroll p {{
-    position: absolute;
-    width: 100%;
-    text-align: center;
-    color: #00ff66;
-    font-size: 22px;
-    font-weight: 900;
-    animation: scrollup 12s linear infinite;
-}}
+    .vertical-led-text {{
+        position:absolute;
+        width:100%;
+        text-align:center;
+        color:#00ff66;
+        font-size:23px;
+        font-weight:950;
+        letter-spacing:1px;
+        line-height:1.45;
+        text-shadow:0 0 6px #00ff66,0 0 14px #00ff66,0 0 28px #00ff66;
+        animation: turunVertical 12s linear infinite;
+        padding:0 16px;
+        box-sizing:border-box;
+    }}
 
-@keyframes scrollup {{
-    0%   {{ top: -100%; }}
-    100% {{ top: 100%; }}
-}}
-</style>
+    @keyframes turunVertical {{
+        0% {{ top:-120%; opacity:0; }}
+        15% {{ opacity:1; }}
+        50% {{ top:28%; opacity:1; }}
+        85% {{ opacity:1; }}
+        100% {{ top:120%; opacity:0; }}
+    }}
+    </style>
 
-<div class="led-box">
-    <div class="vertical-scroll">
-        <p>{running_text}</p>
+    <div class="vertical-led-box">
+        <div class="vertical-led-text">{running_text}</div>
     </div>
-</div>
-""", unsafe_allow_html=True)
     """, unsafe_allow_html=True)
 
     agenda_status, status_pengajian = status_pengajian_terdekat()
@@ -1142,7 +1153,7 @@ elif menu == "📲 WA Jamaah":
     st.info(f"Target: {target_label} | Jumlah: {len(target)} penerima")
     st.text_area("Isi pesan siap kirim", value=pesan, height=270)
 
-    ringkasan = f"""🕌 AL-FALAH DIGITAL V16
+    ringkasan = f"""🕌 AL-FALAH DIGITAL V16.1
 
 Pengumuman disiapkan:
 {jenis_info}
@@ -1197,7 +1208,7 @@ Pesan sudah tersedia di menu WA Jamaah."""
 
             st.success(f"Selesai. Berhasil: {sukses} | Gagal: {gagal}")
             st.dataframe(pd.DataFrame(log_hasil), use_container_width=True)
-            kirim_telegram(f"🕌 AL-FALAH DIGITAL V16\n\nWA Otomatis selesai.\nJenis: {jenis_info}\nTarget: {target_label}\nBerhasil: {sukses}\nGagal: {gagal}")
+            kirim_telegram(f"🕌 AL-FALAH DIGITAL V16.1\n\nWA Otomatis selesai.\nJenis: {jenis_info}\nTarget: {target_label}\nBerhasil: {sukses}\nGagal: {gagal}")
 
     st.markdown("### Daftar Target")
     st.dataframe(target[["Nama", "JenisKelamin", "NoWA", "Aktif"]], use_container_width=True)
@@ -1432,7 +1443,7 @@ Jazakumullahu khairan.
                 st.success(f"Selesai. Berhasil: {sukses} | Gagal: {gagal}")
                 st.dataframe(pd.DataFrame(log_hasil), use_container_width=True)
 
-                ringkasan = f"""🕌 AL-FALAH DIGITAL V16
+                ringkasan = f"""🕌 AL-FALAH DIGITAL V16.1
 
 WA Broadcast selesai.
 Jenis: {jenis_broadcast}
