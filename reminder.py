@@ -3,67 +3,67 @@ import requests
 from datetime import datetime, timedelta
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-CHAT_ID = "8951538688"
-mode = os.getenv("REMINDER_MODE", "pengajian_laki")
-
+CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "8951538688")
+MODE = os.getenv("REMINDER_MODE", "pengajian_laki")
 LINK_APP = "https://kas-masjid-alfalah.streamlit.app"
 
 pengajian_laki = [
     "Ustadz Ihin",
     "Ustadz Nanang",
     "Ustadz Jujun",
-    "Aang Deden Kasyful Anwar"
+    "Aang Deden Kasyful Anwar",
 ]
 
 pengajian_senin = [
     "Ustadz Nanang",
     "Aang Deden Kasyful Anwar",
     "Ustadz Ihin",
-    "Ustadz Ihin"
+    "Ustadz Ihin",
 ]
 
-def kirim_telegram(pesan):
-    if not BOT_TOKEN:
-        print("TELEGRAM_BOT_TOKEN belum ada")
-        return
 
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    response = requests.post(url, json={
-        "chat_id": CHAT_ID,
-        "text": pesan
-    }, timeout=30)
-
-    print(response.text)
+def waktu_wib():
+    return datetime.utcnow() + timedelta(hours=7)
 
 
 def minggu_ke_rotasi():
-    # Pakai WIB, bukan UTC
-    sekarang_wib = datetime.utcnow() + timedelta(hours=7)
-    return sekarang_wib.isocalendar()[1]
+    return waktu_wib().isocalendar()[1]
 
 
 def besok_awal_bulan_hijriah():
-    """
-    Cek apakah besok sekitar tanggal 1 Hijriah.
-    Jika gagal cek API, jangan kirim syahriahan supaya aman.
-    """
+    """Untuk notifikasi Kamis siang: malam Jumat mengikuti tanggal Hijriah besok."""
     try:
-        besok = datetime.utcnow() + timedelta(hours=7, days=1)
+        besok = waktu_wib() + timedelta(days=1)
         tanggal_api = besok.strftime("%d-%m-%Y")
         url = f"https://api.aladhan.com/v1/gToH/{tanggal_api}"
         r = requests.get(url, timeout=20).json()
         hari_hijriah = int(r["data"]["hijri"]["day"])
+        print("Hijriah besok:", hari_hijriah)
         return hari_hijriah == 1
     except Exception as e:
         print("Gagal cek Hijriah:", e)
         return False
 
 
+def kirim_telegram(pesan):
+    if not BOT_TOKEN:
+        print("TELEGRAM_BOT_TOKEN belum ada")
+        return False
+
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    response = requests.post(
+        url,
+        json={"chat_id": CHAT_ID, "text": pesan, "disable_web_page_preview": False},
+        timeout=30,
+    )
+    print(response.text)
+    return response.status_code == 200
+
+
 week = minggu_ke_rotasi()
 
-if mode == "pengajian_laki":
+if MODE == "pengajian_laki":
     ustadz = pengajian_laki[(week - 1) % 4]
-
     pesan = f"""
 📢 PENGINGAT PENGAJIAN MALAM RABU
 
@@ -89,9 +89,8 @@ Mohon hadir tepat waktu.
 Jazakumullahu khairan.
 """
 
-elif mode == "pengajian_senin":
+elif MODE == "pengajian_senin":
     ustadz = pengajian_senin[(week - 1) % 4]
-
     pesan = f"""
 📢 PENGINGAT PENGAJIAN SENENAN
 
@@ -117,9 +116,9 @@ Mohon hadir tepat waktu.
 Jazakumullahu khairan.
 """
 
-elif mode == "syahriahan":
+elif MODE == "syahriahan":
     if not besok_awal_bulan_hijriah():
-        print("Besok bukan tanggal 1 Hijriah. Syahriahan tidak dikirim.")
+        print("Besok bukan tanggal 1 Hijriah. Telegram syahriahan tidak dikirim.")
         raise SystemExit(0)
 
     pesan = f"""
@@ -127,7 +126,7 @@ elif mode == "syahriahan":
 
 Assalamu'alaikum Warahmatullahi Wabarakatuh.
 
-Insya Allah malam Jumat ini akan dilaksanakan Syahriahan Sholawat awal bulan Hijriah.
+Insya Allah malam ini akan dilaksanakan Syahriahan Sholawat awal bulan Hijriah.
 
 🎙 Pimpinan:
 Aang Deden Kasyful Anwar
@@ -148,7 +147,7 @@ Jazakumullahu khairan.
 """
 
 else:
-    print("REMINDER_MODE tidak dikenal:", mode)
+    print("REMINDER_MODE tidak dikenal:", MODE)
     raise SystemExit(1)
 
 kirim_telegram(pesan)
