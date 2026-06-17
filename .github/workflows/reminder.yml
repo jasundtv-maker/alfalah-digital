@@ -18,9 +18,9 @@ jobs:
         with:
           python-version: "3.11"
 
-      - run: pip install requests
+      - run: pip install requests gspread google-auth
 
-      - name: Kirim Pengingat
+      - name: Kirim Pengingat Telegram
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
@@ -34,4 +34,21 @@ jobs:
             REMINDER_MODE=syahriahan python reminder.py
           elif [ "$DAY" = "7" ]; then
             REMINDER_MODE=pengajian_senin python reminder.py
+          fi
+
+      - name: Kirim Pengingat WhatsApp
+        env:
+          FONNTE_TOKEN: ${{ secrets.FONNTE_TOKEN }}
+          GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+        run: |
+          DAY=$(date -u +%u)
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            REMINDER_MODE=pengajian_laki python reminder_wa.py
+          elif [ "$DAY" = "2" ]; then
+            REMINDER_MODE=pengajian_laki python reminder_wa.py
+          elif [ "$DAY" = "4" ]; then
+            REMINDER_MODE=syahriahan python reminder_wa.py
+          elif [ "$DAY" = "7" ]; then
+            REMINDER_MODE=pengajian_senin python reminder_wa.py
           fi
