@@ -967,7 +967,7 @@ h1, h2, h3 {
         line-height:1.55;
         text-align:center;
         text-shadow:0 0 6px #00ff66,0 0 16px #00ff66;
-        animation: naikPelan 45s linear infinite;
+        animation: naikPelan 20s linear infinite;
         white-space:normal;
     }}
     @keyframes naikPelan {{
