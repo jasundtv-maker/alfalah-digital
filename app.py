@@ -10,7 +10,7 @@ import json
 import gspread
 from google.oauth2.service_account import Credentials
 
-st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V16.1", page_icon="🕌", layout="wide")
+st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V16.2.1", page_icon="🕌", layout="wide")
 
 KAS_FILE = "kas_masjid.csv"
 PENGUMUMAN_FILE = "pengumuman.csv"
@@ -608,7 +608,7 @@ tanggal_wib = wib.date()
 hijriah_text = kalender_hijriah_online(tanggal_wib)
 sholat = jadwal_sholat_cianjur()
 
-st.sidebar.title("🕌 APP AL-FALAH V16.1")
+st.sidebar.title("🕌 APP AL-FALAH V16.2.2")
 
 mode = st.sidebar.radio("Mode Aplikasi", ["👥 Jamaah", "🔐 Admin"])
 
@@ -818,23 +818,25 @@ h1, h2, h3 {
         terakhir = pengumuman_df.tail(1).iloc[0]
         running_text = f"📢 Pengumuman Terbaru: {terakhir['Judul']} - {terakhir['Isi']}"
 
-    st.markdown(f"""
+    safe_running_text = str(running_text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    components.html(f"""
+    <html>
+    <head>
     <style>
+    body {{ margin:0; padding:0; background:transparent; font-family:Arial, sans-serif; }}
     .vertical-led-box {{
         background:#020617;
         border:3px solid #FFD700;
         border-radius:18px;
-        padding:0;
         height:86px;
         overflow:hidden;
-        margin-bottom:22px;
         box-shadow:0 0 22px rgba(255,215,0,.75), inset 0 0 20px rgba(0,255,102,.18);
         position:relative;
     }}
-
     .vertical-led-text {{
         position:absolute;
-        width:100%;
+        left:0;
+        right:0;
         text-align:center;
         color:#00ff66;
         font-size:23px;
@@ -842,24 +844,27 @@ h1, h2, h3 {
         letter-spacing:1px;
         line-height:1.45;
         text-shadow:0 0 6px #00ff66,0 0 14px #00ff66,0 0 28px #00ff66;
-        animation: turunVertical 12s linear infinite;
-        padding:0 16px;
+        animation: turunVertical 13s linear infinite;
+        padding:0 18px;
         box-sizing:border-box;
+        white-space:normal;
     }}
-
     @keyframes turunVertical {{
-        0% {{ top:-120%; opacity:0; }}
-        15% {{ opacity:1; }}
-        50% {{ top:28%; opacity:1; }}
-        85% {{ opacity:1; }}
+        0% {{ top:-110%; opacity:0; }}
+        12% {{ opacity:1; }}
+        45% {{ top:28%; opacity:1; }}
+        78% {{ opacity:1; }}
         100% {{ top:120%; opacity:0; }}
     }}
     </style>
-
-    <div class="vertical-led-box">
-        <div class="vertical-led-text">{running_text}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    </head>
+    <body>
+        <div class="vertical-led-box">
+            <div class="vertical-led-text">{safe_running_text}</div>
+        </div>
+    </body>
+    </html>
+    """, height=105)
 
     agenda_status, status_pengajian = status_pengajian_terdekat()
     target_js = agenda_status["target"].strftime("%Y-%m-%dT%H:%M:%S")
