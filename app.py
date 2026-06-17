@@ -819,9 +819,35 @@ h1, h2, h3 {
         running_text = f"📢 Pengumuman Terbaru: {terakhir['Judul']} - {terakhir['Isi']}"
 
     st.markdown(f"""
-    <div class="led-box">
-        <marquee scrollamount="7" class="led-text">{running_text}</marquee>
+<style>
+.vertical-scroll {{
+    height: 70px;
+    overflow: hidden;
+    position: relative;
+}}
+
+.vertical-scroll p {{
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    color: #00ff66;
+    font-size: 22px;
+    font-weight: 900;
+    animation: scrollup 12s linear infinite;
+}}
+
+@keyframes scrollup {{
+    0%   {{ top: -100%; }}
+    100% {{ top: 100%; }}
+}}
+</style>
+
+<div class="led-box">
+    <div class="vertical-scroll">
+        <p>{running_text}</p>
     </div>
+</div>
+""", unsafe_allow_html=True)
     """, unsafe_allow_html=True)
 
     agenda_status, status_pengajian = status_pengajian_terdekat()
