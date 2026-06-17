@@ -2,15 +2,9 @@ name: Pengingat Al-Falah Digital
 
 on:
   schedule:
-    # Selasa 12:00 WIB
-    - cron: '0 5 * * 2'
-
-    # Minggu 20:00 WIB
-    - cron: '0 13 * * 0'
-
-    # Kamis 16:00 WIB
-    - cron: '0 9 * * 4'
-
+    - cron: "0 5 * * 2"   # Selasa 12:00 WIB
+    - cron: "0 13 * * 0"  # Minggu 20:00 WIB
+    - cron: "0 5 * * 4"   # Kamis 12:00 WIB cek Syahriahan
   workflow_dispatch:
 
 jobs:
