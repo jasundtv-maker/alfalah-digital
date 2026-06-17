@@ -7,7 +7,7 @@ import urllib.parse
 import requests
 import base64
 
-st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V13", page_icon="🕌", layout="wide")
+st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V15.1", page_icon="🕌", layout="wide")
 
 KAS_FILE = "kas_masjid.csv"
 PENGUMUMAN_FILE = "pengumuman.csv"
@@ -16,6 +16,7 @@ JAMAAH_FILE = "jamaah.csv"
 CHAT_ID = "8951538688"
 LINK_APP = "https://kas-masjid-alfalah.streamlit.app"
 GRUP_AL_BARZAJI = "https://chat.whatsapp.com/JWobEDYP9MXEfDYHt8zlLR"
+SHEET_ID = "18Af7MohqKRIOlU9XuGCCmXeSaPfqOv8_DWrGH65Zqtc"
 
 KOLOM_KAS = ["Tanggal", "Jenis", "Kategori", "Keterangan", "Jumlah", "Petugas"]
 KOLOM_PENGUMUMAN = ["Tanggal", "Judul", "Isi"]
@@ -130,16 +131,53 @@ def init_jamaah():
     if not os.path.exists(JAMAAH_FILE):
         pd.DataFrame(DATA_JAMAAH_AWAL, columns=KOLOM_JAMAAH).to_csv(JAMAAH_FILE, index=False)
 
+def load_sheet_csv(sheet_name):
+    """Baca Google Sheet publik via CSV. Jika gagal, return DataFrame kosong."""
+    try:
+        url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={urllib.parse.quote(sheet_name)}"
+        return pd.read_csv(url, dtype=str).fillna("")
+    except Exception:
+        return pd.DataFrame()
+
+def rapikan_jamaah_df(df):
+    for k in KOLOM_JAMAAH:
+        if k not in df.columns:
+            df[k] = ""
+    df = df[KOLOM_JAMAAH].copy()
+    df["Nama"] = df["Nama"].astype(str).str.strip()
+    df["JenisKelamin"] = df["JenisKelamin"].astype(str).str.strip()
+    df["JenisKelamin"] = df["JenisKelamin"].replace({
+        "L": "Laki-laki", "l": "Laki-laki", "LAKI-LAKI": "Laki-laki", "Laki Laki": "Laki-laki",
+        "P": "Perempuan", "p": "Perempuan", "PEREMPUAN": "Perempuan"
+    })
+    df["NoWA"] = df["NoWA"].astype(str).apply(normalisasi_wa)
+    df["Aktif"] = df["Aktif"].astype(str).str.strip().replace({"": "Ya", "YA": "Ya", "ya": "Ya"})
+    df["Catatan"] = df["Catatan"].astype(str).replace({"": "-"})
+    df = df[df["Nama"] != ""].copy()
+    return df
+
 def load_jamaah():
+    # Prioritas utama: Google Sheet Jamaah
+    online = load_sheet_csv("Jamaah")
+    if not online.empty:
+        return rapikan_jamaah_df(online)
+
+    # Fallback: CSV lokal lama
     init_jamaah()
     try:
         df = pd.read_csv(JAMAAH_FILE, dtype=str).fillna("-")
         for k in KOLOM_JAMAAH:
             if k not in df.columns:
                 df[k] = "-"
-        return df[KOLOM_JAMAAH]
+        return rapikan_jamaah_df(df)
     except Exception:
         return pd.DataFrame(DATA_JAMAAH_AWAL, columns=KOLOM_JAMAAH)
+
+def load_setting_wa():
+    df = load_sheet_csv("Setting WA")
+    if df.empty or "Key" not in df.columns or "Value" not in df.columns:
+        return {}
+    return dict(zip(df["Key"].astype(str), df["Value"].astype(str)))
 
 def save_jamaah(df):
     df.to_csv(JAMAAH_FILE, index=False)
@@ -272,6 +310,42 @@ def kirim_telegram(pesan):
         return True
     except:
         return False
+
+
+def ambil_secret(nama, default=""):
+    try:
+        return st.secrets[nama]
+    except Exception:
+        return os.getenv(nama, default)
+
+def kirim_fonnte(nomor, pesan):
+    token = ambil_secret("FONNTE_TOKEN", "")
+    if not token:
+        return False, "FONNTE_TOKEN belum diisi di Streamlit Secrets"
+
+    nomor = normalisasi_wa(nomor)
+    try:
+        res = requests.post(
+            "https://api.fonnte.com/send",
+            headers={"Authorization": token},
+            data={
+                "target": nomor,
+                "message": pesan,
+                "countryCode": "62",
+            },
+            timeout=30,
+        )
+        try:
+            hasil = res.json()
+        except Exception:
+            hasil = {"raw": res.text}
+
+        if res.status_code == 200:
+            return True, str(hasil)
+        return False, f"HTTP {res.status_code}: {hasil}"
+    except Exception as e:
+        return False, str(e)
+
 
 def tanggal_berikutnya(target_weekday):
     hari_ini = date.today()
@@ -406,12 +480,17 @@ def status_pengajian_terdekat():
 kas_df = load_kas()
 pengumuman_df = load_pengumuman()
 
+# Setting dari Google Sheet jika tersedia
+setting_wa_online = load_setting_wa()
+LINK_APP = setting_wa_online.get("LinkApp", LINK_APP)
+GRUP_AL_BARZAJI = setting_wa_online.get("GroupBarzaji", GRUP_AL_BARZAJI)
+
 wib = waktu_wib()
 tanggal_wib = wib.date()
 hijriah_text = kalender_hijriah_online(tanggal_wib)
 sholat = jadwal_sholat_cianjur()
 
-st.sidebar.title("🕌 APP AL-FALAH V13")
+st.sidebar.title("🕌 APP AL-FALAH V15.1")
 
 mode = st.sidebar.radio("Mode Aplikasi", ["👥 Jamaah", "🔐 Admin"])
 
@@ -917,7 +996,7 @@ elif menu == "📲 WA Jamaah":
     st.info(f"Target: {target_label} | Jumlah: {len(target)} penerima")
     st.text_area("Isi pesan siap kirim", value=pesan, height=270)
 
-    ringkasan = f"""🕌 AL-FALAH DIGITAL V13
+    ringkasan = f"""🕌 AL-FALAH DIGITAL V15.1
 
 Pengumuman disiapkan:
 {jenis_info}
@@ -932,12 +1011,40 @@ Pesan sudah tersedia di menu WA Jamaah."""
         else:
             st.warning("Telegram belum terkirim. Cek TELEGRAM_BOT_TOKEN di Secrets.")
 
+    st.markdown("### 🚀 Kirim WA Otomatis Fonnte")
+    st.warning("Pastikan pesan sudah benar. Setelah tombol diklik, pesan akan langsung dikirim ke seluruh target melalui Fonnte.")
+    konfirmasi = st.checkbox("Saya sudah cek pesan dan siap mengirim ke semua target")
+
+    if st.button("🚀 Kirim WhatsApp Otomatis ke Semua Target", disabled=not konfirmasi, use_container_width=True):
+        if target.empty:
+            st.error("Target kosong. Tidak ada pesan yang dikirim.")
+        else:
+            progress = st.progress(0)
+            sukses = 0
+            gagal = 0
+            log_hasil = []
+
+            for i, (_, row) in enumerate(target.iterrows(), start=1):
+                ok, info = kirim_fonnte(row["NoWA"], pesan)
+                if ok:
+                    sukses += 1
+                    log_hasil.append({"Nama": row["Nama"], "NoWA": row["NoWA"], "Status": "Terkirim", "Keterangan": info[:180]})
+                else:
+                    gagal += 1
+                    log_hasil.append({"Nama": row["Nama"], "NoWA": row["NoWA"], "Status": "Gagal", "Keterangan": info[:180]})
+                progress.progress(i / len(target))
+
+            st.success(f"Selesai. Berhasil: {sukses} | Gagal: {gagal}")
+            st.dataframe(pd.DataFrame(log_hasil), use_container_width=True)
+            kirim_telegram(f"🕌 AL-FALAH DIGITAL V15.1\n\nWA Otomatis selesai.\nJenis: {jenis_info}\nTarget: {target_label}\nBerhasil: {sukses}\nGagal: {gagal}")
+
     st.markdown("### Daftar Target")
     st.dataframe(target[["Nama", "JenisKelamin", "NoWA", "Aktif"]], use_container_width=True)
 
-    st.warning("Tombol WA dibuka satu per satu agar aman dan tidak dianggap spam oleh WhatsApp.")
+    st.markdown("### Tombol Manual Cadangan")
+    st.caption("Jika gateway sedang bermasalah, tombol manual ini masih bisa dipakai satu per satu.")
     for _, row in target.iterrows():
-        st.link_button(f"📱 Kirim ke {row['Nama']}", wa_nomor_link(row["NoWA"], pesan), use_container_width=True)
+        st.link_button(f"📱 Manual ke {row['Nama']}", wa_nomor_link(row["NoWA"], pesan), use_container_width=True)
 
     st.markdown("### Grup AL-BARZAJI")
     st.markdown(f"[👥 Buka Grup AL-BARZAJI]({GRUP_AL_BARZAJI})")
