@@ -40,6 +40,7 @@ jobs:
         env:
           FONNTE_TOKEN: ${{ secrets.FONNTE_TOKEN }}
           GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
           DAY=$(date -u +%u)
 
