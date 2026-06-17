@@ -10,7 +10,7 @@ import json
 import gspread
 from google.oauth2.service_account import Credentials
 
-st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V15.3", page_icon="🕌", layout="wide")
+st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V16", page_icon="🕌", layout="wide")
 
 KAS_FILE = "kas_masjid.csv"
 PENGUMUMAN_FILE = "pengumuman.csv"
@@ -183,7 +183,25 @@ def load_setting_wa():
     return dict(zip(df["Key"].astype(str), df["Value"].astype(str)))
 
 def save_jamaah(df):
+    # Fallback lokal lama, tetap disimpan untuk cadangan.
     df.to_csv(JAMAAH_FILE, index=False)
+
+
+def simpan_jamaah_google(nama, jk, nowa, aktif, catatan):
+    """Simpan data jamaah langsung ke Google Sheet tab Jamaah."""
+    try:
+        sh, info = koneksi_google_sheet_write()
+        if sh is None:
+            return False, info
+
+        ws = sh.worksheet("Jamaah")
+        ws.append_row(
+            [str(nama).strip(), str(jk).strip(), normalisasi_wa(nowa), str(aktif).strip(), str(catatan).strip() or "-"],
+            value_input_option="USER_ENTERED"
+        )
+        return True, "Data jamaah berhasil disimpan ke Google Sheet."
+    except Exception as e:
+        return False, str(e)
 
 def normalisasi_wa(nomor):
     nomor = str(nomor).replace("+", "").replace("-", "").replace(" ", "").strip()
@@ -435,26 +453,6 @@ def simpan_log_wa(nama, nowa, jenis_pesan, status, keterangan):
         return False, str(e)
 
 
-def simpan_jamaah_google_sheet(nama, jenis_kelamin, no_wa, aktif, catatan):
-    """Simpan data jamaah langsung ke tab Jamaah di Google Sheet."""
-    try:
-        sh, info = koneksi_google_sheet_write()
-        if sh is None:
-            return False, info
-
-        ws = sh.worksheet("Jamaah")
-        ws.append_row([
-            str(nama).strip(),
-            str(jenis_kelamin).strip(),
-            normalisasi_wa(no_wa),
-            str(aktif).strip(),
-            str(catatan).strip() if str(catatan).strip() else "-",
-        ], value_input_option="USER_ENTERED")
-        return True, "Data jamaah berhasil masuk ke Google Sheet"
-    except Exception as e:
-        return False, str(e)
-
-
 def baca_log_wa():
     try:
         sh, info = koneksi_google_sheet_write()
@@ -610,7 +608,7 @@ tanggal_wib = wib.date()
 hijriah_text = kalender_hijriah_online(tanggal_wib)
 sholat = jadwal_sholat_cianjur()
 
-st.sidebar.title("🕌 APP AL-FALAH V15.3")
+st.sidebar.title("🕌 APP AL-FALAH V16")
 
 mode = st.sidebar.radio("Mode Aplikasi", ["👥 Jamaah", "🔐 Admin"])
 
@@ -1076,17 +1074,10 @@ elif menu == "👥 Data Jamaah":
         if not nama.strip() or not nowa.strip():
             st.error("Nama dan nomor WhatsApp wajib diisi.")
         else:
-            ok, info = simpan_jamaah_google_sheet(
-                nama.strip(),
-                jk,
-                nowa.strip(),
-                aktif,
-                catatan.strip()
-            )
-
+            ok, info = simpan_jamaah_google(nama.strip(), jk, nowa.strip(), aktif, catatan.strip())
             if ok:
                 st.success(info)
-                st.info("Jika tabel belum langsung berubah, tunggu beberapa detik lalu refresh aplikasi. Google Sheet kadang butuh waktu membaca ulang data publik.")
+                st.cache_data.clear()
                 st.rerun()
             else:
                 st.error(f"Gagal menyimpan jamaah ke Google Sheet: {info}")
@@ -1125,7 +1116,7 @@ elif menu == "📲 WA Jamaah":
     st.info(f"Target: {target_label} | Jumlah: {len(target)} penerima")
     st.text_area("Isi pesan siap kirim", value=pesan, height=270)
 
-    ringkasan = f"""🕌 AL-FALAH DIGITAL V15.3
+    ringkasan = f"""🕌 AL-FALAH DIGITAL V16
 
 Pengumuman disiapkan:
 {jenis_info}
@@ -1180,7 +1171,7 @@ Pesan sudah tersedia di menu WA Jamaah."""
 
             st.success(f"Selesai. Berhasil: {sukses} | Gagal: {gagal}")
             st.dataframe(pd.DataFrame(log_hasil), use_container_width=True)
-            kirim_telegram(f"🕌 AL-FALAH DIGITAL V15.3\n\nWA Otomatis selesai.\nJenis: {jenis_info}\nTarget: {target_label}\nBerhasil: {sukses}\nGagal: {gagal}")
+            kirim_telegram(f"🕌 AL-FALAH DIGITAL V16\n\nWA Otomatis selesai.\nJenis: {jenis_info}\nTarget: {target_label}\nBerhasil: {sukses}\nGagal: {gagal}")
 
     st.markdown("### Daftar Target")
     st.dataframe(target[["Nama", "JenisKelamin", "NoWA", "Aktif"]], use_container_width=True)
@@ -1231,21 +1222,209 @@ elif menu == "📢 Pengumuman":
         st.dataframe(pengumuman_df, use_container_width=True)
 
 elif menu == "📲 Share WhatsApp":
-    st.subheader("📲 Share ke WhatsApp")
-    teks = st.text_area("Teks yang akan dibagikan", value="""Assalamu'alaikum Warahmatullahi Wabarakatuh
+    st.subheader("📲 V16 Smart Broadcast WhatsApp")
+
+    if mode != "🔐 Admin":
+        st.info("Menu ini untuk membagikan informasi masjid secara manual.")
+        teks = st.text_area("Teks yang akan dibagikan", value=f"""Assalamu'alaikum Warahmatullahi Wabarakatuh
 
 Pengumuman Masjid Jami Al-Falah
 Kp. Caringin
 
-Insya Allah akan dilaksanakan kegiatan di Masjid Jami Al-Falah.
-
 Informasi jadwal dan pengumuman terbaru:
-https://kas-masjid-alfalah.streamlit.app
+{LINK_APP}
 
 Grup Jamaah AL-BARZAJI:
-https://chat.whatsapp.com/JWobEDYP9MXEfDYHt8zlLR
+{GRUP_AL_BARZAJI}
+
+Jazakumullahu khairan.""", height=220)
+        st.markdown(f"[📤 Bagikan ke WhatsApp]({wa_link(teks)})")
+        st.code(teks)
+    else:
+        st.caption("Kirim pengumuman otomatis via Fonnte, simpan Log WA, dan kirim ringkasan ke Telegram Admin.")
+
+        jamaah_df = load_jamaah()
+        log_df = baca_log_wa()
+
+        jenis_broadcast = st.selectbox(
+            "Jenis Pesan",
+            ["Pengumuman Terakhir", "Pesan Custom", "Pengajian Senenan", "Pengajian Malam Rabu", "Syahriahan Sholawat"]
+        )
+
+        judul_pesan = "Pengumuman Masjid Jami Al-Falah"
+        isi_default = ""
+
+        if jenis_broadcast == "Pengumuman Terakhir":
+            if pengumuman_df.empty:
+                st.warning("Belum ada pengumuman tersimpan. Buat dulu di menu 📢 Pengumuman atau gunakan Pesan Custom.")
+                isi_default = ""
+            else:
+                terakhir = pengumuman_df.tail(1).iloc[0]
+                judul_pesan = str(terakhir.get("Judul", "Pengumuman Masjid Jami Al-Falah"))
+                isi_peng = str(terakhir.get("Isi", ""))
+                isi_default = f"""Assalamu'alaikum Warahmatullahi Wabarakatuh.
+
+{judul_pesan}
+
+{isi_peng}
+
+🌐 Aplikasi AL-FALAH Digital:
+{LINK_APP}
 
 Jazakumullahu khairan.
-""")
-    st.markdown(f"[📤 Bagikan ke WhatsApp]({wa_link(teks)})")
-    st.code(teks)
+
+🕌 DKM Masjid Jami AL-FALAH"""
+
+        elif jenis_broadcast == "Pesan Custom":
+            judul_pesan = st.text_input("Judul Pesan", value="Pengumuman Masjid Jami AL-FALAH")
+            isi_default = f"""Assalamu'alaikum Warahmatullahi Wabarakatuh.
+
+{judul_pesan}
+
+Silakan isi pengumuman di sini.
+
+🌐 Aplikasi AL-FALAH Digital:
+{LINK_APP}
+
+Jazakumullahu khairan.
+
+🕌 DKM Masjid Jami AL-FALAH"""
+
+        elif jenis_broadcast == "Pengajian Senenan":
+            tgl_senin = tanggal_berikutnya(0)
+            pengisi_default = pengajian_senin[index_rotasi_senin(tgl_senin)]
+            daftar_pengisi = ["Aang Deden", "Ustadz Ihin", "Ustadz Nanang"]
+            pengisi = st.selectbox("Pengisi", daftar_pengisi, index=daftar_pengisi.index(pengisi_default) if pengisi_default in daftar_pengisi else 0)
+            judul_pesan = "Pengajian Senenan"
+            isi_default = pesan_senenan(pengisi)
+
+        elif jenis_broadcast == "Pengajian Malam Rabu":
+            tgl_selasa = tanggal_berikutnya(1)
+            pengisi_default = pengajian_malam_rabu[index_rotasi_rabu(tgl_selasa)]
+            daftar_pengisi = ["Ustadz Ihin", "Ustadz Nanang", "Ustadz Jujun", "Aang Deden"]
+            pengisi = st.selectbox("Pengisi", daftar_pengisi, index=daftar_pengisi.index(pengisi_default) if pengisi_default in daftar_pengisi else 0)
+            judul_pesan = "Pengajian Malam Rabu"
+            isi_default = pesan_malam_rabu(pengisi)
+
+        else:
+            judul_pesan = "Syahriahan Sholawat"
+            isi_default = pesan_syahriahan()
+
+        st.markdown("### ✍️ Preview dan Edit Pesan")
+        pesan_final = st.text_area("Pesan yang akan dikirim", value=isi_default, height=320)
+
+        st.markdown("### 🎯 Target Penerima")
+        target_mode = st.radio(
+            "Pilih Target",
+            ["Tes ke nomor admin saja", "Semua jamaah aktif", "Pengurus", "Perempuan aktif", "Laki-laki aktif", "Nomor tertentu"],
+            horizontal=False
+        )
+
+        if target_mode == "Tes ke nomor admin saja":
+            nomor_test = ambil_secret("FONNTE_DEVICE_ID", "6281395440454")
+            nomor_test = st.text_input("Nomor Test", value=nomor_test)
+            target = pd.DataFrame([["Admin/Test", "-", normalisasi_wa(nomor_test), "Ya", "Test"]], columns=KOLOM_JAMAAH)
+            target_label = "Tes ke nomor admin saja"
+
+        elif target_mode == "Semua jamaah aktif":
+            target = jamaah_df[jamaah_df["Aktif"].astype(str).str.lower().isin(["ya", "khusus"])].copy()
+            target_label = "Semua jamaah aktif"
+
+        elif target_mode == "Pengurus":
+            target = jamaah_df[jamaah_df["Catatan"].astype(str).str.lower().str.contains("pengurus", na=False)].copy()
+            target_label = "Pengurus"
+
+        elif target_mode == "Perempuan aktif":
+            target = jamaah_df[(jamaah_df["JenisKelamin"] == "Perempuan") & (jamaah_df["Aktif"].astype(str).str.lower().eq("ya"))].copy()
+            target_label = "Jamaah perempuan aktif"
+
+        elif target_mode == "Laki-laki aktif":
+            target = jamaah_df[(jamaah_df["JenisKelamin"] == "Laki-laki") & (jamaah_df["Aktif"].astype(str).str.lower().eq("ya"))].copy()
+            target_label = "Jamaah laki-laki aktif"
+
+        else:
+            nama_manual = st.text_input("Nama Penerima", value="Test Manual")
+            nomor_manual = st.text_input("Nomor WhatsApp", value="6281395440454")
+            target = pd.DataFrame([[nama_manual, "-", normalisasi_wa(nomor_manual), "Ya", "Manual"]], columns=KOLOM_JAMAAH)
+            target_label = "Nomor tertentu"
+
+        target = target.copy()
+        if not target.empty:
+            target["NoWA"] = target["NoWA"].astype(str).apply(normalisasi_wa)
+            target = target[target["NoWA"] != ""].drop_duplicates(subset=["NoWA"])
+
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Target", target_label)
+        c2.metric("Jumlah Penerima", len(target))
+        c3.metric("Log WA", len(log_df) if not log_df.empty else 0)
+
+        with st.expander("👀 Lihat daftar target", expanded=True):
+            if target.empty:
+                st.warning("Target kosong.")
+            else:
+                st.dataframe(target[["Nama", "JenisKelamin", "NoWA", "Aktif", "Catatan"]], use_container_width=True)
+
+        st.markdown("### 🚀 Kirim Otomatis")
+        st.warning("Pastikan pesan dan target sudah benar. Setelah tombol diklik, pesan akan langsung dikirim via Fonnte.")
+        konfirmasi = st.checkbox("Saya sudah cek pesan dan target, siap mengirim")
+
+        if st.button("🚀 Kirim WhatsApp Otomatis", disabled=not konfirmasi, use_container_width=True):
+            if target.empty:
+                st.error("Target kosong. Tidak ada pesan dikirim.")
+            elif not pesan_final.strip():
+                st.error("Pesan kosong. Isi pesan terlebih dahulu.")
+            else:
+                progress = st.progress(0)
+                sukses = 0
+                gagal = 0
+                log_hasil = []
+
+                for i, (_, row) in enumerate(target.iterrows(), start=1):
+                    nama_jamaah = str(row.get("Nama", "")).strip() or "Tanpa Nama"
+                    nomor_jamaah = normalisasi_wa(row.get("NoWA", ""))
+
+                    ok, info = kirim_fonnte(nomor_jamaah, pesan_final)
+                    status = "Terkirim" if ok else "Gagal"
+
+                    if ok:
+                        sukses += 1
+                    else:
+                        gagal += 1
+
+                    ket = str(info)[:180]
+                    log_ok, log_info = simpan_log_wa(nama_jamaah, nomor_jamaah, jenis_broadcast, status, ket)
+
+                    log_hasil.append({
+                        "Nama": nama_jamaah,
+                        "NoWA": nomor_jamaah,
+                        "Status": status,
+                        "Keterangan": ket,
+                        "Log WA": "Tersimpan" if log_ok else f"Gagal: {log_info}"
+                    })
+                    progress.progress(i / len(target))
+
+                st.success(f"Selesai. Berhasil: {sukses} | Gagal: {gagal}")
+                st.dataframe(pd.DataFrame(log_hasil), use_container_width=True)
+
+                ringkasan = f"""🕌 AL-FALAH DIGITAL V16
+
+WA Broadcast selesai.
+Jenis: {jenis_broadcast}
+Target: {target_label}
+Jumlah Target: {len(target)}
+✅ Berhasil: {sukses}
+❌ Gagal: {gagal}
+Waktu: {waktu_wib().strftime('%d-%m-%Y %H:%M:%S')} WIB"""
+                kirim_telegram(ringkasan)
+
+        st.markdown("### 📋 Riwayat Log WA Terbaru")
+        log_df = baca_log_wa()
+        if log_df.empty:
+            st.info("Log WA masih kosong atau belum bisa dibaca.")
+        else:
+            st.dataframe(log_df.tail(50), use_container_width=True)
+
+        st.markdown("### 🧯 Tombol Manual Cadangan")
+        st.caption("Jika Fonnte sedang bermasalah, tombol manual ini masih bisa dipakai.")
+        st.markdown(f"[📤 Bagikan Manual ke WhatsApp]({wa_link(pesan_final)})")
+        st.code(pesan_final)
