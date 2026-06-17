@@ -11,7 +11,7 @@ import html
 import gspread
 from google.oauth2.service_account import Credentials
 
-st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V19", page_icon="🕌", layout="wide")
+st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V19.1", page_icon="🕌", layout="wide")
 
 KAS_FILE = "kas_masjid.csv"
 PENGUMUMAN_FILE = "pengumuman.csv"
@@ -710,7 +710,7 @@ tanggal_wib = wib.date()
 hijriah_text = kalender_hijriah_online(tanggal_wib)
 sholat = jadwal_sholat_cianjur()
 
-st.sidebar.title("🕌 APP AL-FALAH V19")
+st.sidebar.title("🕌 APP AL-FALAH V19.1")
 
 mode = st.sidebar.radio("Mode Aplikasi", ["👥 Jamaah", "🔐 Admin"])
 
@@ -1048,7 +1048,7 @@ h1, h2, h3 {
     saldo_rajaban = masuk_rajaban - keluar_rajaban
 
     st.markdown("## 📊 Ringkasan Laporan")
-    st.caption("Saldo akhir tampil ringkas. Klik tombol laporan lengkap di bawah setiap kartu untuk melihat rincian.")
+    st.caption("Saldo akhir tampil ringkas. Klik laporan lengkap di bawah kartu untuk membuka rincian.")
 
     st.markdown("""
     <style>
@@ -1097,28 +1097,10 @@ h1, h2, h3 {
         position: relative;
         z-index: 2;
     }
-    .finance-card-button {
-        margin-top: 24px;
-        display: inline-block;
-        padding: 12px 16px;
-        border-radius: 999px;
-        background: rgba(255,255,255,.18);
-        border: 1px solid rgba(255,255,255,.55);
-        font-weight: 950;
-        font-size: 13px;
-        box-shadow: inset 0 0 18px rgba(255,255,255,.13);
-        position: relative;
-        z-index: 2;
-    }
-    .finance-note-premium {
-        background: linear-gradient(135deg,#020617,#064e3b);
-        color: #fef3c7;
-        border: 2px solid #facc15;
-        border-radius: 18px;
-        padding: 14px 18px;
-        font-weight: 850;
-        box-shadow: 0 0 18px rgba(250,204,21,.3);
-        margin: 8px 0 16px 0;
+    .finance-card-premium:hover {
+        transform: translateY(-3px);
+        transition: all .25s ease;
+        box-shadow: 0 22px 55px rgba(2, 6, 23, .30);
     }
     </style>
     """, unsafe_allow_html=True)
@@ -1129,57 +1111,51 @@ h1, h2, h3 {
             <div class="finance-card-title">{ikon} {judul}</div>
             <div class="finance-card-label">Saldo akhir saat ini</div>
             <div class="finance-card-value">{rupiah(saldo_akhir)}</div>
-            <div class="finance-card-button">📋 Klik Laporan Lengkap →</div>
+            <div style="margin-top:22px;font-size:13px;font-weight:850;opacity:.88;position:relative;z-index:2;">Klik tombol laporan lengkap di bawah kartu.</div>
         </div>
         """, unsafe_allow_html=True)
 
     k1, k2, k3 = st.columns(3)
     with k1:
         kartu_laporan_premium("Laporan Kas Masjid", saldo, "#052e16", "#16a34a", "💰")
+        with st.expander("📋 Klik Laporan Lengkap →", expanded=False):
+            st.metric("Saldo Kas Masjid", rupiah(saldo))
+            st.metric("Total Pemasukan", rupiah(pemasukan))
+            st.metric("Total Pengeluaran", rupiah(pengeluaran))
+            tampil = kas_df.tail(20).copy()
+            if not tampil.empty:
+                tampil["Jumlah"] = tampil["Jumlah"].apply(rupiah)
+                st.dataframe(tampil, use_container_width=True)
+            else:
+                st.info("Belum ada data kas masjid.")
+
     with k2:
         kartu_laporan_premium("Laporan Kas Madrasah", saldo_madrasah, "#1e1b4b", "#06b6d4", "🏫")
+        with st.expander("📋 Klik Laporan Lengkap →", expanded=False):
+            khusus = kas_df[kas_df["Kategori"].isin(["Kotak Amal Senenan", "Kas Madrasah"])].copy()
+            st.metric("Saldo Kas Madrasah", rupiah(saldo_madrasah))
+            st.metric("Total Pemasukan Madrasah", rupiah(masuk_madrasah))
+            st.metric("Total Pengeluaran Madrasah", rupiah(keluar_madrasah))
+            if not khusus.empty:
+                khusus_tampil = khusus.tail(20).copy()
+                khusus_tampil["Jumlah"] = khusus_tampil["Jumlah"].apply(rupiah)
+                st.dataframe(khusus_tampil, use_container_width=True)
+            else:
+                st.info("Belum ada data kas madrasah.")
+
     with k3:
         kartu_laporan_premium("Laporan Iuran Rajaban", saldo_rajaban, "#7c2d12", "#f97316", "🎉")
-
-    st.markdown("<div class='finance-note-premium'>🟢 Transparansi Keuangan Aktif • Klik salah satu laporan lengkap di bawah ini untuk melihat rincian tanpa perlu scroll jauh.</div>", unsafe_allow_html=True)
-
-    st.markdown("## 🧭 Pusat Informasi Keuangan Masjid")
-    st.caption("Rincian laporan ditempatkan tepat di bawah ringkasan agar jamaah mudah melihat laporan lengkap.")
-
-    with st.expander("💰 📋 Klik Laporan Lengkap Kas Masjid", expanded=False):
-        st.metric("Saldo Kas Masjid", rupiah(saldo))
-        st.metric("Total Pemasukan", rupiah(pemasukan))
-        st.metric("Total Pengeluaran", rupiah(pengeluaran))
-        tampil = kas_df.tail(20).copy()
-        if not tampil.empty:
-            tampil["Jumlah"] = tampil["Jumlah"].apply(rupiah)
-            st.dataframe(tampil, use_container_width=True)
-        else:
-            st.info("Belum ada data kas masjid.")
-
-    with st.expander("🏫 📋 Klik Laporan Lengkap Kas Madrasah", expanded=False):
-        khusus = kas_df[kas_df["Kategori"].isin(["Kotak Amal Senenan", "Kas Madrasah"])].copy()
-        st.metric("Saldo Kas Madrasah", rupiah(saldo_madrasah))
-        st.metric("Total Pemasukan Madrasah", rupiah(masuk_madrasah))
-        st.metric("Total Pengeluaran Madrasah", rupiah(keluar_madrasah))
-        if not khusus.empty:
-            khusus_tampil = khusus.tail(20).copy()
-            khusus_tampil["Jumlah"] = khusus_tampil["Jumlah"].apply(rupiah)
-            st.dataframe(khusus_tampil, use_container_width=True)
-        else:
-            st.info("Belum ada data kas madrasah.")
-
-    with st.expander("🎉 📋 Klik Laporan Lengkap Iuran Rajaban", expanded=False):
-        rajaban = kas_df[kas_df["Kategori"] == "Iuran PHBI Rajaban"].copy()
-        st.metric("Saldo Dana Rajaban", rupiah(saldo_rajaban))
-        st.metric("Total Iuran Masuk", rupiah(masuk_rajaban))
-        st.metric("Total Pengeluaran", rupiah(keluar_rajaban))
-        if not rajaban.empty:
-            rajaban_tampil = rajaban.tail(20).copy()
-            rajaban_tampil["Jumlah"] = rajaban_tampil["Jumlah"].apply(rupiah)
-            st.dataframe(rajaban_tampil, use_container_width=True)
-        else:
-            st.info("Belum ada data iuran Rajaban.")
+        with st.expander("📋 Klik Laporan Lengkap →", expanded=False):
+            rajaban = kas_df[kas_df["Kategori"] == "Iuran PHBI Rajaban"].copy()
+            st.metric("Saldo Dana Rajaban", rupiah(saldo_rajaban))
+            st.metric("Total Iuran Masuk", rupiah(masuk_rajaban))
+            st.metric("Total Pengeluaran", rupiah(keluar_rajaban))
+            if not rajaban.empty:
+                rajaban_tampil = rajaban.tail(20).copy()
+                rajaban_tampil["Jumlah"] = rajaban_tampil["Jumlah"].apply(rupiah)
+                st.dataframe(rajaban_tampil, use_container_width=True)
+            else:
+                st.info("Belum ada data iuran Rajaban.")
 
     st.divider()
 
@@ -1231,7 +1207,7 @@ h1, h2, h3 {
     st.divider()
 
     st.markdown("## 🧭 Pusat Informasi Masjid")
-    st.caption("Informasi umum masjid. Untuk laporan keuangan lengkap, lihat bagian Pusat Informasi Keuangan di atas.")
+    st.caption("Informasi umum masjid seperti pengumuman aktif, agenda kegiatan, dan pengurus inti DKM.")
 
     card4, card5, card6 = st.columns(3)
     with card4:
