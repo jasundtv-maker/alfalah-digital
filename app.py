@@ -10,7 +10,7 @@ import json
 import gspread
 from google.oauth2.service_account import Credentials
 
-st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V15.2", page_icon="🕌", layout="wide")
+st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V15.3", page_icon="🕌", layout="wide")
 
 KAS_FILE = "kas_masjid.csv"
 PENGUMUMAN_FILE = "pengumuman.csv"
@@ -435,6 +435,26 @@ def simpan_log_wa(nama, nowa, jenis_pesan, status, keterangan):
         return False, str(e)
 
 
+def simpan_jamaah_google_sheet(nama, jenis_kelamin, no_wa, aktif, catatan):
+    """Simpan data jamaah langsung ke tab Jamaah di Google Sheet."""
+    try:
+        sh, info = koneksi_google_sheet_write()
+        if sh is None:
+            return False, info
+
+        ws = sh.worksheet("Jamaah")
+        ws.append_row([
+            str(nama).strip(),
+            str(jenis_kelamin).strip(),
+            normalisasi_wa(no_wa),
+            str(aktif).strip(),
+            str(catatan).strip() if str(catatan).strip() else "-",
+        ], value_input_option="USER_ENTERED")
+        return True, "Data jamaah berhasil masuk ke Google Sheet"
+    except Exception as e:
+        return False, str(e)
+
+
 def baca_log_wa():
     try:
         sh, info = koneksi_google_sheet_write()
@@ -590,7 +610,7 @@ tanggal_wib = wib.date()
 hijriah_text = kalender_hijriah_online(tanggal_wib)
 sholat = jadwal_sholat_cianjur()
 
-st.sidebar.title("🕌 APP AL-FALAH V15.2")
+st.sidebar.title("🕌 APP AL-FALAH V15.3")
 
 mode = st.sidebar.radio("Mode Aplikasi", ["👥 Jamaah", "🔐 Admin"])
 
@@ -1056,11 +1076,20 @@ elif menu == "👥 Data Jamaah":
         if not nama.strip() or not nowa.strip():
             st.error("Nama dan nomor WhatsApp wajib diisi.")
         else:
-            baru = pd.DataFrame([[nama.strip(), jk, normalisasi_wa(nowa), aktif, catatan]], columns=KOLOM_JAMAAH)
-            jamaah_df = pd.concat([jamaah_df, baru], ignore_index=True)
-            save_jamaah(jamaah_df)
-            st.success("Data jamaah berhasil disimpan.")
-            st.rerun()
+            ok, info = simpan_jamaah_google_sheet(
+                nama.strip(),
+                jk,
+                nowa.strip(),
+                aktif,
+                catatan.strip()
+            )
+
+            if ok:
+                st.success(info)
+                st.info("Jika tabel belum langsung berubah, tunggu beberapa detik lalu refresh aplikasi. Google Sheet kadang butuh waktu membaca ulang data publik.")
+                st.rerun()
+            else:
+                st.error(f"Gagal menyimpan jamaah ke Google Sheet: {info}")
 
 elif menu == "📲 WA Jamaah":
     st.subheader("📲 Share WhatsApp Jamaah")
@@ -1096,7 +1125,7 @@ elif menu == "📲 WA Jamaah":
     st.info(f"Target: {target_label} | Jumlah: {len(target)} penerima")
     st.text_area("Isi pesan siap kirim", value=pesan, height=270)
 
-    ringkasan = f"""🕌 AL-FALAH DIGITAL V15.2
+    ringkasan = f"""🕌 AL-FALAH DIGITAL V15.3
 
 Pengumuman disiapkan:
 {jenis_info}
@@ -1151,7 +1180,7 @@ Pesan sudah tersedia di menu WA Jamaah."""
 
             st.success(f"Selesai. Berhasil: {sukses} | Gagal: {gagal}")
             st.dataframe(pd.DataFrame(log_hasil), use_container_width=True)
-            kirim_telegram(f"🕌 AL-FALAH DIGITAL V15.2\n\nWA Otomatis selesai.\nJenis: {jenis_info}\nTarget: {target_label}\nBerhasil: {sukses}\nGagal: {gagal}")
+            kirim_telegram(f"🕌 AL-FALAH DIGITAL V15.3\n\nWA Otomatis selesai.\nJenis: {jenis_info}\nTarget: {target_label}\nBerhasil: {sukses}\nGagal: {gagal}")
 
     st.markdown("### Daftar Target")
     st.dataframe(target[["Nama", "JenisKelamin", "NoWA", "Aktif"]], use_container_width=True)
