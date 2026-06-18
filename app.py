@@ -10,7 +10,7 @@ import json
 import gspread
 from google.oauth2.service_account import Credentials
 
-st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V20.0", page_icon="🕌", layout="wide")
+st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V20.1", page_icon="🕌", layout="wide")
 
 KAS_FILE = "kas_masjid.csv"
 PENGUMUMAN_FILE = "pengumuman.csv"
@@ -19,6 +19,7 @@ JAMAAH_FILE = "jamaah.csv"
 CHAT_ID = "8951538688"
 LINK_APP = "https://kas-masjid-alfalah.streamlit.app"
 GRUP_AL_BARZANJI = "https://chat.whatsapp.com/JWobEDYP9MXEfDYHt8zlLR"
+GRUP_AL_BARZAJI = GRUP_AL_BARZANJI
 GRUP_AL_BARZANJI = GRUP_AL_BARZANJI
 NOMOR_MASJID = "087742958453"
 SHEET_ID = "18Af7MohqKRIOlU9XuGCCmXeSaPfqOv8_DWrGH65Zqtc"
@@ -638,6 +639,38 @@ def status_pengajian_terdekat():
     agenda[0]["target"] = agenda[0]["mulai"]
     return agenda[0], "menunggu"
 
+
+def tampilkan_kartu_bank(judul, nilai, subjudul="", ikon="💳", tema="hijau"):
+    warna = {
+        "hijau": ("#064e3b", "#16a34a", "#bbf7d0"),
+        "emas": ("#78350f", "#f59e0b", "#fef3c7"),
+        "biru": ("#1e3a8a", "#2563eb", "#dbeafe"),
+        "ungu": ("#581c87", "#9333ea", "#f3e8ff"),
+        "merah": ("#7f1d1d", "#dc2626", "#fee2e2"),
+    }
+    a, b, c = warna.get(tema, warna["hijau"])
+    st.markdown(f"""
+    <div style="
+        background:linear-gradient(135deg,{a},{b});
+        border-radius:24px;
+        padding:24px;
+        min-height:150px;
+        color:white;
+        box-shadow:0 12px 28px rgba(0,0,0,.18);
+        border:2px solid rgba(255,215,0,.75);
+        position:relative;
+        overflow:hidden;
+        margin-bottom:16px;
+    ">
+        <div style="position:absolute;right:-35px;top:-35px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.12);"></div>
+        <div style="font-size:30px;">{ikon}</div>
+        <div style="font-size:16px;font-weight:800;margin-top:8px;color:{c};">{judul}</div>
+        <div style="font-size:34px;font-weight:950;margin-top:8px;text-shadow:0 0 10px rgba(0,0,0,.25);">{nilai}</div>
+        <div style="font-size:13px;margin-top:12px;opacity:.92;">{subjudul}</div>
+        <div style="font-size:12px;margin-top:10px;letter-spacing:2px;opacity:.65;">AL-FALAH DIGITAL CARD</div>
+    </div>
+    """, unsafe_allow_html=True)
+
 kas_df = load_kas()
 pengumuman_df = load_pengumuman()
 pengumuman_aktif_df = pengumuman_aktif_24jam(pengumuman_df)
@@ -654,7 +687,7 @@ sholat = jadwal_sholat_cianjur()
 
 
 # =========================================================
-# V20.0 - WA OTOMATIS KEGIATAN & LAPORAN KEUANGAN
+# V20.1 - WA OTOMATIS KEGIATAN & LAPORAN KEUANGAN
 # =========================================================
 def laporan_keuangan_text():
     try:
@@ -816,7 +849,7 @@ try:
 except Exception:
     pass
 
-st.sidebar.title("🕌 APP AL-FALAH V20.0")
+st.sidebar.title("🕌 APP AL-FALAH V20.1")
 
 mode = st.sidebar.radio("Mode Aplikasi", ["👥 Jamaah", "🔐 Admin"])
 
@@ -1052,12 +1085,12 @@ h1, h2, h3 {
         letter-spacing:1px;
         line-height:1.45;
         text-shadow:0 0 6px #00ff66,0 0 14px #00ff66,0 0 28px #00ff66;
-        animation: turunVertical 13s linear infinite;
+        animation: naikVertical 13s linear infinite;
         padding:0 18px;
         box-sizing:border-box;
         white-space:normal;
     }}
-    @keyframes turunVertical {{
+    @keyframes naikVertical {{
         0% {{ top:-110%; opacity:0; }}
         12% {{ opacity:1; }}
         45% {{ top:28%; opacity:1; }}
@@ -1132,19 +1165,31 @@ h1, h2, h3 {
     pengeluaran = kas_df[kas_df["Jenis"] == "Pengeluaran"]["Jumlah"].sum()
     saldo = pemasukan - pengeluaran
     total_kotak_amal = kas_df[kas_df["Kategori"] == "Kotak Amal"]["Jumlah"].sum()
+    kas_madrasah = kas_df[kas_df["Kategori"].astype(str).str.contains("Madrasah", case=False, na=False)]["Jumlah"].sum()
+    iuran_rajaban = kas_df[kas_df["Kategori"].astype(str).str.contains("Rajaban", case=False, na=False)]["Jumlah"].sum()
     jumlah_buka_kotak = len(kas_df[kas_df["Kategori"] == "Kotak Amal"])
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("💰 Saldo Kas", rupiah(saldo))
-    c2.metric("⬆️ Total Pemasukan", rupiah(pemasukan))
-    c3.metric("⬇️ Total Pengeluaran", rupiah(pengeluaran))
-    c4.metric("📦 Total Kotak Amal", rupiah(total_kotak_amal))
+    st.markdown("## 💳 Kartu Keuangan Digital")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        tampilkan_kartu_bank("Saldo Kas Masjid", rupiah(saldo), "Saldo akhir kas umum Masjid Jami Al-Falah", "💰", "hijau")
+    with c2:
+        tampilkan_kartu_bank("Kas Madrasah", rupiah(kas_madrasah), "Ringkasan kategori Madrasah", "🏫", "biru")
+    with c3:
+        tampilkan_kartu_bank("Iuran Rajaban", rupiah(iuran_rajaban), "Ringkasan kategori Rajaban", "🌙", "emas")
 
-    c5, c6, c7, c8 = st.columns(4)
-    c5.metric("📦 Buka Kotak Amal", f"{jumlah_buka_kotak} kali")
-    c6.metric("👥 Pengurus", sum(len(v) for v in pengurus.values()))
-    c7.metric("📢 Pengumuman Aktif", len(pengumuman_aktif_df))
-    c8.metric("📅 Agenda Tetap", len(agenda_tetap))
+    c4, c5, c6 = st.columns(3)
+    with c4:
+        tampilkan_kartu_bank("Total Pemasukan", rupiah(pemasukan), "Semua pemasukan tercatat", "⬆️", "hijau")
+    with c5:
+        tampilkan_kartu_bank("Total Pengeluaran", rupiah(pengeluaran), "Semua pengeluaran tercatat", "⬇️", "merah")
+    with c6:
+        tampilkan_kartu_bank("Total Kotak Amal", rupiah(total_kotak_amal), f"Dibuka {jumlah_buka_kotak} kali", "📦", "ungu")
+
+    c7, c8, c9 = st.columns(3)
+    c7.metric("👥 Pengurus", sum(len(v) for v in pengurus.values()))
+    c8.metric("📢 Pengumuman Aktif", len(pengumuman_aktif_df))
+    c9.metric("📅 Agenda Tetap", len(agenda_tetap))
 
     st.divider()
 
@@ -1247,7 +1292,7 @@ elif menu == "💰 Input Kas":
         c1, c2, c3 = st.columns(3)
         tanggal = c1.date_input("Tanggal", date.today())
         jenis = c2.selectbox("Jenis", ["Pemasukan", "Pengeluaran"])
-        kategori = c3.selectbox("Kategori", ["Infaq Jumat", "Kotak Amal", "Donatur", "Pembangunan", "Listrik", "Kebersihan", "Lainnya"])
+        kategori = c3.selectbox("Kategori", ["Infaq Jumat", "Kotak Amal", "Kas Madrasah", "Iuran Rajaban", "Donatur", "Pembangunan", "Listrik", "Kebersihan", "Lainnya"])
         keterangan = st.text_input("Keterangan")
         jumlah = st.number_input("Jumlah", min_value=0, step=1000)
         petugas = st.text_input("Petugas", value="Aceng Abdul Roup")
