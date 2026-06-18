@@ -19,6 +19,8 @@ JAMAAH_FILE = "jamaah.csv"
 CHAT_ID = "8951538688"
 LINK_APP = "https://kas-masjid-alfalah.streamlit.app"
 GRUP_AL_BARZANJI = "https://chat.whatsapp.com/JWobEDYP9MXEfDYHt8zlLR"
+GRUP_AL_BARZANJI = GRUP_AL_BARZANJI
+NOMOR_MASJID = "087742958453"
 SHEET_ID = "18Af7MohqKRIOlU9XuGCCmXeSaPfqOv8_DWrGH65Zqtc"
 
 KOLOM_KAS = ["Tanggal", "Jenis", "Kategori", "Keterangan", "Jumlah", "Petugas"]
@@ -267,8 +269,8 @@ Besok seperti biasa akan dilaksanakan Pengajian Senenan di Madrasah Al-Falah pad
 📍 Tempat:
 Madrasah Al-Falah
 
-👥 Grup Jamaah AL-BARZAJI:
-{GRUP_AL_BARZAJI}
+👥 Grup Jamaah AL-BARZANJI:
+{GRUP_AL_BARZANJI}
 
 🌐 Informasi jadwal dan pengumuman terbaru:
 {LINK_APP}
@@ -288,8 +290,8 @@ Malam ini akan dilaksanakan Pengajian Malam Rabu di Madrasah Al-Falah pada pukul
 📍 Tempat:
 Madrasah Al-Falah
 
-👥 Grup Jamaah AL-BARZAJI:
-{GRUP_AL_BARZAJI}
+👥 Grup Jamaah AL-BARZANJI:
+{GRUP_AL_BARZANJI}
 
 🌐 Informasi jadwal dan pengumuman terbaru:
 {LINK_APP}
@@ -301,7 +303,7 @@ Pesan ini dikirim otomatis melalui Al-Falah Digital."""
 def pesan_syahriahan():
     return f"""Assalamu'alaikum Warahmatullahi Wabarakatuh.
 
-Malam ini akan dilaksanakan Syahriahan Sholawat masyarakat di Masjid Jami Al-Falah.
+Malam ini akan dilaksanakan Syahriahan Sholawat di Masjid Jami Al-Falah.
 
 👳 Pimpinan:
 Aang Deden Kasyful Anwar
@@ -309,13 +311,10 @@ Aang Deden Kasyful Anwar
 📍 Tempat:
 Masjid Jami Al-Falah
 
-👥 Grup Jamaah AL-BARZAJI:
-{GRUP_AL_BARZAJI}
-
 🌐 Informasi jadwal dan pengumuman terbaru:
 {LINK_APP}
 
-Kami mengundang seluruh jamaah dan masyarakat untuk hadir bersama-sama dalam pembacaan sholawat, dzikir, dan doa.
+Terima kasih atas partisipasi seluruh jamaah dan masyarakat.
 
 Pesan ini dikirim otomatis melalui Al-Falah Digital."""
 
@@ -639,183 +638,6 @@ def status_pengajian_terdekat():
     agenda[0]["target"] = agenda[0]["mulai"]
     return agenda[0], "menunggu"
 
-
-# =========================================================
-# V20.0 - OTOMATIS WA KEGIATAN & LAPORAN KEUANGAN
-# =========================================================
-NOMOR_MASJID_BARU = "6287742958453"
-AUTO_KEY_DEFAULT = "alfalah-v20"
-
-
-def target_semua_jamaah_aktif():
-    jamaah_df = load_jamaah()
-    if jamaah_df is None or jamaah_df.empty:
-        return pd.DataFrame(columns=KOLOM_JAMAAH)
-    target = jamaah_df[jamaah_df["Aktif"].astype(str).str.lower().isin(["ya", "khusus"])].copy()
-    target = target[target["NoWA"].astype(str).str.strip() != ""].copy()
-    return target.drop_duplicates(subset=["NoWA"])
-
-
-def target_pengajian_senenan_otomatis():
-    jamaah_df = load_jamaah()
-    if jamaah_df is None or jamaah_df.empty:
-        return pd.DataFrame(columns=KOLOM_JAMAAH)
-    return jamaah_df[(jamaah_df["JenisKelamin"] == "Perempuan") & (jamaah_df["Aktif"] == "Ya")].copy().drop_duplicates(subset=["NoWA"])
-
-
-def target_pengajian_malam_rabu_otomatis(pengisi=""):
-    jamaah_df = load_jamaah()
-    if jamaah_df is None or jamaah_df.empty:
-        return pd.DataFrame(columns=KOLOM_JAMAAH)
-    target = jamaah_df[(jamaah_df["JenisKelamin"] == "Laki-laki") & (jamaah_df["Aktif"] == "Ya")].copy()
-    target = tambah_khusus_jika_pengisi(target, jamaah_df, pengisi)
-    return target.drop_duplicates(subset=["NoWA"])
-
-
-def ringkasan_keuangan_text(kas_data=None, judul="Laporan Keuangan Masjid Jami Al-Falah"):
-    if kas_data is None:
-        kas_data = load_kas()
-    if kas_data is None or kas_data.empty:
-        return f"""Assalamu'alaikum Warahmatullahi Wabarakatuh.
-
-{judul}
-
-Belum ada data kas yang dapat dilaporkan.
-
-Pesan ini dikirim otomatis melalui Al-Falah Digital."""
-
-    df = kas_data.copy()
-    df["Jumlah"] = pd.to_numeric(df["Jumlah"], errors="coerce").fillna(0)
-    pemasukan = df[df["Jenis"] == "Pemasukan"]["Jumlah"].sum()
-    pengeluaran = df[df["Jenis"] == "Pengeluaran"]["Jumlah"].sum()
-    saldo = pemasukan - pengeluaran
-
-    kas_madrasah = df[df["Kategori"].astype(str).str.lower().str.contains("madrasah", na=False)]["Jumlah"].sum()
-    iuran_rajaban = df[df["Kategori"].astype(str).str.lower().str.contains("rajaban", na=False)]["Jumlah"].sum()
-    kotak_amal = df[df["Kategori"].astype(str).str.lower().str.contains("kotak", na=False)]["Jumlah"].sum()
-
-    transaksi_terakhir = df.tail(5).copy()
-    baris = []
-    for _, r in transaksi_terakhir.iterrows():
-        baris.append(f"- {r.get('Tanggal','')} | {r.get('Jenis','')} | {r.get('Kategori','')} | {rupiah(r.get('Jumlah',0))}")
-    teks_transaksi = "\n".join(baris) if baris else "Belum ada transaksi terbaru."
-
-    return f"""Assalamu'alaikum Warahmatullahi Wabarakatuh.
-
-📊 {judul}
-
-💰 Total Pemasukan: {rupiah(pemasukan)}
-💸 Total Pengeluaran: {rupiah(pengeluaran)}
-✅ Saldo Akhir: {rupiah(saldo)}
-
-📦 Kotak Amal: {rupiah(kotak_amal)}
-🏫 Kas Madrasah: {rupiah(kas_madrasah)}
-🌙 Iuran Rajaban: {rupiah(iuran_rajaban)}
-
-📋 Transaksi Terbaru:
-{teks_transaksi}
-
-Semoga menjadi laporan yang jelas, amanah, dan bermanfaat untuk jamaah.
-
-🕌 Masjid Jami Al-Falah
-Kp. Caringin RT/RW 005/005 Desa Sukasari
-
-Pesan ini dikirim otomatis melalui Al-Falah Digital."""
-
-
-def pesan_kegiatan_v20(jenis, pengisi=""):
-    if jenis == "Pengajian Senenan":
-        return pesan_senenan(pengisi)
-    if jenis == "Pengajian Malam Rabu":
-        return pesan_malam_rabu(pengisi)
-    if jenis == "Syahriahan Sholawat":
-        return pesan_syahriahan()
-    return ""
-
-
-def kirim_massal_v20(target_df, pesan, jenis_pesan="Otomatis V20"):
-    sukses = 0
-    gagal = 0
-    hasil = []
-    if target_df is None or target_df.empty:
-        return sukses, gagal, pd.DataFrame(columns=["Nama", "NoWA", "Status", "Keterangan"])
-
-    for _, row in target_df.iterrows():
-        nama = str(row.get("Nama", "Jamaah"))
-        nowa = str(row.get("NoWA", ""))
-        if not nowa:
-            continue
-        ok, info = kirim_fonnte(nowa, pesan)
-        status = "Terkirim" if ok else "Gagal"
-        if ok:
-            sukses += 1
-        else:
-            gagal += 1
-        ket = str(info)[:180]
-        simpan_log_wa(nama, nowa, jenis_pesan, status, ket)
-        hasil.append({"Nama": nama, "NoWA": nowa, "Status": status, "Keterangan": ket})
-    return sukses, gagal, pd.DataFrame(hasil)
-
-
-def kunci_otomatis_valid():
-    auto_key = ambil_secret("AUTO_KEY", AUTO_KEY_DEFAULT)
-    try:
-        params = st.query_params
-        return params.get("key", "") == auto_key
-    except Exception:
-        return False
-
-
-def jalankan_auto_dari_query():
-    """Dipakai untuk GitHub Actions / cron.
-    Contoh URL:
-    https://app.streamlit.app/?auto=malam_rabu&key=alfalah-v20
-    https://app.streamlit.app/?auto=senenan&key=alfalah-v20
-    https://app.streamlit.app/?auto=syahriahan&key=alfalah-v20
-    https://app.streamlit.app/?auto=laporan&key=alfalah-v20
-    """
-    try:
-        auto = st.query_params.get("auto", "")
-    except Exception:
-        auto = ""
-    if not auto:
-        return
-
-    if not kunci_otomatis_valid():
-        st.error("AUTO_KEY salah. Akses otomatis ditolak.")
-        st.stop()
-
-    jamaah_df = load_jamaah()
-    if auto == "senenan":
-        tgl_senin = tanggal_berikutnya(0)
-        pengisi = pengajian_senin[index_rotasi_senin(tgl_senin)]
-        pesan = pesan_senenan(pengisi)
-        target = target_pengajian_senenan_otomatis()
-        jenis = "AUTO Pengajian Senenan"
-    elif auto == "malam_rabu":
-        tgl_selasa = tanggal_berikutnya(1)
-        pengisi = pengajian_malam_rabu[index_rotasi_rabu(tgl_selasa)]
-        pesan = pesan_malam_rabu(pengisi)
-        target = target_pengajian_malam_rabu_otomatis(pengisi)
-        jenis = "AUTO Pengajian Malam Rabu"
-    elif auto == "syahriahan":
-        pesan = pesan_syahriahan()
-        target = target_semua_jamaah_aktif()
-        jenis = "AUTO Syahriahan Sholawat"
-    elif auto == "laporan":
-        pesan = ringkasan_keuangan_text(load_kas())
-        target = target_semua_jamaah_aktif()
-        jenis = "AUTO Laporan Keuangan"
-    else:
-        st.error("Jenis auto tidak dikenal.")
-        st.stop()
-
-    sukses, gagal, hasil_df = kirim_massal_v20(target, pesan, jenis)
-    kirim_telegram(f"🕌 AL-FALAH DIGITAL V20\n\n{jenis} selesai.\nTarget: {len(target)}\nBerhasil: {sukses}\nGagal: {gagal}")
-    st.success(f"{jenis} selesai. Berhasil: {sukses} | Gagal: {gagal}")
-    st.dataframe(hasil_df, use_container_width=True)
-    st.stop()
-
 kas_df = load_kas()
 pengumuman_df = load_pengumuman()
 pengumuman_aktif_df = pengumuman_aktif_24jam(pengumuman_df)
@@ -823,15 +645,176 @@ pengumuman_aktif_df = pengumuman_aktif_24jam(pengumuman_df)
 # Setting dari Google Sheet jika tersedia
 setting_wa_online = load_setting_wa()
 LINK_APP = setting_wa_online.get("LinkApp", LINK_APP)
-GRUP_AL_BARZAJI = setting_wa_online.get("GroupBarzaji", GRUP_AL_BARZAJI)
+GRUP_AL_BARZANJI = setting_wa_online.get("GroupBarzaji", GRUP_AL_BARZANJI)
 
 wib = waktu_wib()
 tanggal_wib = wib.date()
 hijriah_text = kalender_hijriah_online(tanggal_wib)
 sholat = jadwal_sholat_cianjur()
 
-# Jika dibuka dari GitHub Actions dengan parameter ?auto=... maka kirim otomatis lalu stop.
-jalankan_auto_dari_query()
+
+# =========================================================
+# V20.0 - WA OTOMATIS KEGIATAN & LAPORAN KEUANGAN
+# =========================================================
+def laporan_keuangan_text():
+    try:
+        pemasukan = kas_df[kas_df["Jenis"] == "Pemasukan"]["Jumlah"].sum()
+        pengeluaran = kas_df[kas_df["Jenis"] == "Pengeluaran"]["Jumlah"].sum()
+        saldo = pemasukan - pengeluaran
+        total_kotak_amal = kas_df[kas_df["Kategori"] == "Kotak Amal"]["Jumlah"].sum()
+        total_madrasah = kas_df[kas_df["Kategori"].astype(str).str.contains("Madrasah", case=False, na=False)]["Jumlah"].sum()
+        total_rajaban = kas_df[kas_df["Kategori"].astype(str).str.contains("Rajaban", case=False, na=False)]["Jumlah"].sum()
+    except Exception:
+        pemasukan = pengeluaran = saldo = total_kotak_amal = total_madrasah = total_rajaban = 0
+
+    return f"""📊 LAPORAN KEUANGAN MASJID JAMI AL-FALAH
+
+Tanggal: {format_tanggal(tanggal_wib)}
+
+💰 Total Pemasukan: {rupiah(pemasukan)}
+⬇️ Total Pengeluaran: {rupiah(pengeluaran)}
+✅ Saldo Kas: {rupiah(saldo)}
+📦 Total Kotak Amal: {rupiah(total_kotak_amal)}
+🏫 Kas/Iuran Madrasah: {rupiah(total_madrasah)}
+🌙 Iuran Rajaban: {rupiah(total_rajaban)}
+
+🕌 Masjid Jami Al-Falah
+Kp. Caringin RT/RW 005/005
+Desa Sukasari, Karangtengah, Cianjur
+
+Pesan ini dikirim otomatis melalui Al-Falah Digital."""
+
+
+def target_otomatis(jenis_auto, jamaah_df):
+    if jamaah_df is None or jamaah_df.empty:
+        return pd.DataFrame(columns=KOLOM_JAMAAH), "Target kosong"
+
+    if jenis_auto == "senenan":
+        target = jamaah_df[(jamaah_df["JenisKelamin"] == "Perempuan") & (jamaah_df["Aktif"].astype(str).str.lower().eq("ya"))].copy()
+        return target, "Jamaah perempuan aktif"
+
+    if jenis_auto == "rabu":
+        target = jamaah_df[(jamaah_df["JenisKelamin"] == "Laki-laki") & (jamaah_df["Aktif"].astype(str).str.lower().eq("ya"))].copy()
+        tgl_selasa = tanggal_berikutnya(1)
+        pengisi = pengajian_malam_rabu[index_rotasi_rabu(tgl_selasa)]
+        target = tambah_khusus_jika_pengisi(target, jamaah_df, pengisi)
+        return target, "Jamaah laki-laki aktif"
+
+    if jenis_auto == "syahriahan":
+        target = filter_jamaah_aktif_umum(jamaah_df)
+        target = tambah_khusus_jika_pengisi(target, jamaah_df, "Aang Deden")
+        return target, "Semua jamaah aktif"
+
+    if jenis_auto == "laporan":
+        nomor = ambil_secret("FONTE_DEVICE_ID", "") or ambil_secret("FONNTE_DEVICE_ID", "") or NOMOR_MASJID
+        target = pd.DataFrame([["Admin/Masjid", "-", normalisasi_wa(nomor), "Ya", "Laporan Keuangan"]], columns=KOLOM_JAMAAH)
+        return target, "Nomor masjid/admin"
+
+    return pd.DataFrame(columns=KOLOM_JAMAAH), "Jenis otomatis tidak dikenal"
+
+
+def pesan_otomatis(jenis_auto):
+    if jenis_auto == "senenan":
+        tgl_senin = tanggal_berikutnya(0)
+        pengisi = pengajian_senin[index_rotasi_senin(tgl_senin)]
+        return "Pengajian Senenan Otomatis", pesan_senenan(pengisi)
+
+    if jenis_auto == "rabu":
+        tgl_selasa = tanggal_berikutnya(1)
+        pengisi = pengajian_malam_rabu[index_rotasi_rabu(tgl_selasa)]
+        return "Pengajian Malam Rabu Otomatis", pesan_malam_rabu(pengisi)
+
+    if jenis_auto == "syahriahan":
+        return "Syahriahan Sholawat Otomatis", pesan_syahriahan()
+
+    if jenis_auto == "laporan":
+        return "Laporan Keuangan Otomatis", laporan_keuangan_text()
+
+    return "Otomatis", ""
+
+
+def sudah_terkirim_hari_ini(jenis_pesan):
+    try:
+        log_df = baca_log_wa()
+        if log_df.empty:
+            return False
+        hari_ini = waktu_wib().strftime("%Y-%m-%d")
+        tanggal_col = log_df.get("Tanggal", pd.Series(dtype=str)).astype(str)
+        jenis_col = log_df.get("JenisPesan", pd.Series(dtype=str)).astype(str)
+        status_col = log_df.get("Status", pd.Series(dtype=str)).astype(str)
+        cek = log_df[
+            tanggal_col.str.startswith(hari_ini)
+            & jenis_col.eq(jenis_pesan)
+            & status_col.eq("Terkirim")
+        ]
+        return not cek.empty
+    except Exception:
+        return False
+
+
+def kirim_otomatis_v20(jenis_auto, paksa=False):
+    jamaah_df = load_jamaah()
+    jenis_pesan, pesan = pesan_otomatis(jenis_auto)
+
+    if not pesan.strip():
+        return {"ok": False, "info": "Pesan kosong", "sukses": 0, "gagal": 0}
+
+    if (not paksa) and sudah_terkirim_hari_ini(jenis_pesan):
+        return {"ok": False, "info": f"{jenis_pesan} sudah pernah terkirim hari ini", "sukses": 0, "gagal": 0}
+
+    target, target_label = target_otomatis(jenis_auto, jamaah_df)
+    if target.empty:
+        return {"ok": False, "info": "Target kosong", "sukses": 0, "gagal": 0}
+
+    target = target.copy()
+    target["NoWA"] = target["NoWA"].astype(str).apply(normalisasi_wa)
+    target = target[target["NoWA"] != ""].drop_duplicates(subset=["NoWA"])
+
+    sukses = 0
+    gagal = 0
+    detail = []
+
+    for _, row in target.iterrows():
+        nama = str(row.get("Nama", "Tanpa Nama")).strip() or "Tanpa Nama"
+        nomor = normalisasi_wa(row.get("NoWA", ""))
+        ok, info = kirim_fonnte(nomor, pesan)
+        status = "Terkirim" if ok else "Gagal"
+        if ok:
+            sukses += 1
+        else:
+            gagal += 1
+        simpan_log_wa(nama, nomor, jenis_pesan, status, str(info)[:180])
+        detail.append({"Nama": nama, "NoWA": nomor, "Status": status, "Keterangan": str(info)[:180]})
+
+    ringkasan = f"""🕌 AL-FALAH DIGITAL V20
+
+WA otomatis selesai.
+Jenis: {jenis_pesan}
+Target: {target_label}
+Jumlah Target: {len(target)}
+✅ Berhasil: {sukses}
+❌ Gagal: {gagal}
+Waktu: {waktu_wib().strftime('%d-%m-%Y %H:%M:%S')} WIB"""
+    kirim_telegram(ringkasan)
+    return {"ok": True, "info": ringkasan, "sukses": sukses, "gagal": gagal, "detail": detail, "pesan": pesan, "target_label": target_label}
+
+
+# Endpoint sederhana untuk GitHub Actions / cron:
+# ?auto=senenan&key=ISI_AUTO_KEY
+# ?auto=rabu&key=ISI_AUTO_KEY
+# ?auto=syahriahan&key=ISI_AUTO_KEY
+# ?auto=laporan&key=ISI_AUTO_KEY
+try:
+    qp = st.query_params
+    auto_param = qp.get("auto", "")
+    key_param = qp.get("key", "")
+    auto_key = ambil_secret("AUTO_KEY", "")
+    if auto_param and auto_key and key_param == auto_key:
+        hasil_auto = kirim_otomatis_v20(auto_param, paksa=False)
+        st.json(hasil_auto)
+        st.stop()
+except Exception:
+    pass
 
 st.sidebar.title("🕌 APP AL-FALAH V20.0")
 
@@ -840,7 +823,7 @@ mode = st.sidebar.radio("Mode Aplikasi", ["👥 Jamaah", "🔐 Admin"])
 if mode == "🔐 Admin":
     menu = st.sidebar.radio(
         "Menu Admin",
-        ["🏠 Dashboard", "💰 Input Kas", "📦 Input Kotak Amal", "📊 Laporan Kas", "🤖 WA Otomatis V20", "👥 Data Jamaah", "📲 WA Jamaah", "👥 Pengurus DKM", "📅 Jadwal Pengajian", "📢 Pengumuman", "📲 Share WhatsApp"]
+        ["🏠 Dashboard", "💰 Input Kas", "📦 Input Kotak Amal", "📊 Laporan Kas", "👥 Data Jamaah", "📲 WA Jamaah", "🤖 WA Otomatis V20", "👥 Pengurus DKM", "📅 Jadwal Pengajian", "📢 Pengumuman", "📲 Share WhatsApp"]
     )
 else:
     menu = st.sidebar.radio(
@@ -1264,7 +1247,7 @@ elif menu == "💰 Input Kas":
         c1, c2, c3 = st.columns(3)
         tanggal = c1.date_input("Tanggal", date.today())
         jenis = c2.selectbox("Jenis", ["Pemasukan", "Pengeluaran"])
-        kategori = c3.selectbox("Kategori", ["Infaq Jumat", "Kotak Amal", "Donatur", "Pembangunan", "Kas Madrasah", "Iuran Rajaban", "PHBI", "Listrik", "Kebersihan", "Lainnya"])
+        kategori = c3.selectbox("Kategori", ["Infaq Jumat", "Kotak Amal", "Donatur", "Pembangunan", "Listrik", "Kebersihan", "Lainnya"])
         keterangan = st.text_input("Keterangan")
         jumlah = st.number_input("Jumlah", min_value=0, step=1000)
         petugas = st.text_input("Petugas", value="Aceng Abdul Roup")
@@ -1456,85 +1439,67 @@ Pesan sudah tersedia di menu WA Jamaah."""
     for _, row in target.iterrows():
         st.link_button(f"📱 Manual ke {row['Nama']}", wa_nomor_link(row["NoWA"], pesan), use_container_width=True)
 
-    st.markdown("### Grup AL-BARZAJI")
-    st.markdown(f"[👥 Buka Grup AL-BARZAJI]({GRUP_AL_BARZAJI})")
+    st.markdown("### Grup AL-BARZANJI")
+    st.markdown(f"[👥 Buka Grup AL-BARZANJI]({GRUP_AL_BARZANJI})")
 
 
 elif menu == "🤖 WA Otomatis V20":
     st.subheader("🤖 WA Otomatis V20 - Kegiatan & Laporan Keuangan")
-    st.info("Menu ini untuk tes dan kontrol WA otomatis. Untuk benar-benar otomatis sesuai jam, pakai GitHub Actions membuka link auto di bawah.")
+    st.success("Modul ini untuk mengirim pesan otomatis kegiatan masjid dan laporan keuangan melalui Fonnte.")
 
-    jamaah_df = load_jamaah()
-    st.markdown("### 📌 Target Otomatis")
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Semua Jamaah Aktif", len(target_semua_jamaah_aktif()))
-    c2.metric("Pengajian Senenan", len(target_pengajian_senenan_otomatis()))
-    agenda_rabu = tanggal_berikutnya(1)
-    pengisi_rabu = pengajian_malam_rabu[index_rotasi_rabu(agenda_rabu)]
-    c3.metric("Malam Rabu", len(target_pengajian_malam_rabu_otomatis(pengisi_rabu)))
-
-    pilihan_auto = st.selectbox(
-        "Pilih pesan otomatis",
-        ["Pengajian Senenan", "Pengajian Malam Rabu", "Syahriahan Sholawat", "Laporan Keuangan"]
+    jenis_auto = st.selectbox(
+        "Pilih jenis otomatis",
+        [
+            "senenan",
+            "rabu",
+            "syahriahan",
+            "laporan",
+        ],
+        format_func=lambda x: {
+            "senenan": "Pengajian Senenan",
+            "rabu": "Pengajian Malam Rabu",
+            "syahriahan": "Syahriahan Sholawat",
+            "laporan": "Laporan Keuangan",
+        }.get(x, x)
     )
 
-    if pilihan_auto == "Pengajian Senenan":
-        tgl_senin = tanggal_berikutnya(0)
-        pengisi = pengajian_senin[index_rotasi_senin(tgl_senin)]
-        pesan_auto = pesan_senenan(pengisi)
-        target_auto = target_pengajian_senenan_otomatis()
-    elif pilihan_auto == "Pengajian Malam Rabu":
-        tgl_selasa = tanggal_berikutnya(1)
-        pengisi = pengajian_malam_rabu[index_rotasi_rabu(tgl_selasa)]
-        pesan_auto = pesan_malam_rabu(pengisi)
-        target_auto = target_pengajian_malam_rabu_otomatis(pengisi)
-    elif pilihan_auto == "Syahriahan Sholawat":
-        pesan_auto = pesan_syahriahan()
-        target_auto = target_semua_jamaah_aktif()
-    else:
-        pesan_auto = ringkasan_keuangan_text(load_kas())
-        target_auto = target_semua_jamaah_aktif()
+    jenis_pesan, pesan_preview = pesan_otomatis(jenis_auto)
+    target_preview, target_label = target_otomatis(jenis_auto, load_jamaah())
 
-    st.text_area("Preview Pesan", value=pesan_auto, height=320)
-    st.warning(f"Target: {len(target_auto)} penerima. Jika tombol kirim diklik, WA langsung dikirim via Fonnte.")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Jenis Pesan", jenis_pesan)
+    c2.metric("Target", target_label)
+    c3.metric("Jumlah", len(target_preview))
 
-    konfirmasi_auto = st.checkbox("Saya sudah cek pesan dan siap kirim otomatis sekarang")
-    if st.button("🚀 Kirim Sekarang", disabled=not konfirmasi_auto, use_container_width=True):
-        progress = st.progress(0)
-        sukses = 0
-        gagal = 0
-        hasil = []
-        total = len(target_auto)
-        for i, (_, row) in enumerate(target_auto.iterrows(), start=1):
-            nama = str(row.get("Nama", "Jamaah"))
-            nowa = str(row.get("NoWA", ""))
-            ok, info = kirim_fonnte(nowa, pesan_auto)
-            status = "Terkirim" if ok else "Gagal"
-            sukses += 1 if ok else 0
-            gagal += 0 if ok else 1
-            ket = str(info)[:180]
-            simpan_log_wa(nama, nowa, pilihan_auto, status, ket)
-            hasil.append({"Nama": nama, "NoWA": nowa, "Status": status, "Keterangan": ket})
-            if total:
-                progress.progress(i / total)
-        st.success(f"Selesai. Berhasil: {sukses} | Gagal: {gagal}")
-        st.dataframe(pd.DataFrame(hasil), use_container_width=True)
-        kirim_telegram(f"🕌 AL-FALAH DIGITAL V20\n\nKirim otomatis manual selesai.\nJenis: {pilihan_auto}\nBerhasil: {sukses}\nGagal: {gagal}")
+    st.text_area("Preview pesan otomatis", value=pesan_preview, height=320)
 
-    st.divider()
-    st.markdown("### 🔗 Link untuk GitHub Actions / Cron")
-    auto_key = ambil_secret("AUTO_KEY", AUTO_KEY_DEFAULT)
-    st.caption("Tambahkan AUTO_KEY di Streamlit Secrets agar link ini aman. Default sementara: alfalah-v20")
-    st.code(f"{LINK_APP}/?auto=senenan&key={auto_key}")
-    st.code(f"{LINK_APP}/?auto=malam_rabu&key={auto_key}")
-    st.code(f"{LINK_APP}/?auto=syahriahan&key={auto_key}")
-    st.code(f"{LINK_APP}/?auto=laporan&key={auto_key}")
+    with st.expander("Lihat target penerima", expanded=False):
+        if target_preview.empty:
+            st.warning("Target masih kosong.")
+        else:
+            st.dataframe(target_preview[["Nama", "JenisKelamin", "NoWA", "Aktif", "Catatan"]], use_container_width=True)
 
-    st.divider()
+    st.markdown("### 🔗 Link Cron GitHub Actions")
+    st.caption("Buka link ini dari GitHub Actions sesuai jadwal. AUTO_KEY harus diisi di Streamlit Secrets.")
+    app_url = LINK_APP.rstrip("/")
+    st.code(f"{app_url}/?auto={jenis_auto}&key=ISI_AUTO_KEY")
+
+    st.markdown("### 🚀 Tes Kirim Sekarang")
+    paksa = st.checkbox("Paksa kirim walaupun hari ini sudah pernah terkirim")
+    siap = st.checkbox("Saya sudah cek pesan dan target, siap kirim")
+
+    if st.button("🚀 Kirim Otomatis Sekarang", disabled=not siap, use_container_width=True):
+        hasil = kirim_otomatis_v20(jenis_auto, paksa=paksa)
+        if hasil.get("ok"):
+            st.success(f"Selesai. Berhasil: {hasil.get('sukses')} | Gagal: {hasil.get('gagal')}")
+            st.dataframe(pd.DataFrame(hasil.get("detail", [])), use_container_width=True)
+        else:
+            st.warning(hasil.get("info", "Tidak terkirim"))
+
     st.markdown("### 📋 Log WA Terbaru")
     log_df = baca_log_wa()
     if log_df.empty:
-        st.info("Log WA masih kosong atau belum bisa dibaca.")
+        st.info("Log WA kosong atau belum bisa dibaca.")
     else:
         st.dataframe(log_df.tail(50), use_container_width=True)
 
@@ -1579,7 +1544,7 @@ elif menu == "📢 Pengumuman":
         st.dataframe(tampil_peng.drop(columns=["Waktu"], errors="ignore"), use_container_width=True)
 
 elif menu == "📲 Share WhatsApp":
-    st.subheader("📲 V20 Smart Broadcast WhatsApp")
+    st.subheader("📲 V17 Smart Broadcast WhatsApp")
 
     if mode != "🔐 Admin":
         st.info("Menu ini untuk membagikan informasi masjid secara manual.")
@@ -1591,8 +1556,8 @@ Kp. Caringin
 Informasi jadwal dan pengumuman terbaru:
 {LINK_APP}
 
-Grup Jamaah AL-BARZAJI:
-{GRUP_AL_BARZAJI}
+Grup Jamaah AL-BARZANJI:
+{GRUP_AL_BARZANJI}
 
 Jazakumullahu khairan.""", height=220)
         st.markdown(f"[📤 Bagikan ke WhatsApp]({wa_link(teks)})")
