@@ -10,7 +10,7 @@ import json
 import gspread
 from google.oauth2.service_account import Credentials
 
-st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V20.2", page_icon="🕌", layout="wide")
+st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V20.3", page_icon="🕌", layout="wide")
 
 KAS_FILE = "kas_masjid.csv"
 PENGUMUMAN_FILE = "pengumuman.csv"
@@ -640,6 +640,112 @@ def status_pengajian_terdekat():
     return agenda[0], "menunggu"
 
 
+
+def tampilkan_running_text_mewah(teks):
+    safe_text = str(teks).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    components.html(f"""
+    <html>
+    <head>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&family=Poppins:wght@600;700;800;900&display=swap');
+
+    body {{
+        margin:0;
+        padding:0;
+        background:transparent;
+    }}
+
+    .lux-led-wrapper {{
+        background:
+            radial-gradient(circle at top left, rgba(255,215,0,.30), transparent 30%),
+            radial-gradient(circle at bottom right, rgba(0,255,120,.20), transparent 35%),
+            linear-gradient(135deg,#020617,#064e3b,#022c22);
+        border:3px solid #FFD700;
+        border-radius:26px;
+        height:150px;
+        overflow:hidden;
+        position:relative;
+        box-shadow:
+            0 0 26px rgba(255,215,0,.90),
+            inset 0 0 24px rgba(0,255,102,.18);
+    }}
+
+    .lux-led-title {{
+        position:absolute;
+        top:10px;
+        left:0;
+        right:0;
+        text-align:center;
+        color:#FFD700;
+        font-family:'Cinzel', serif;
+        font-size:22px;
+        font-weight:900;
+        letter-spacing:2px;
+        text-shadow:0 0 8px #FFD700,0 0 20px rgba(255,215,0,.85);
+        z-index:2;
+    }}
+
+    .lux-led-text {{
+        position:absolute;
+        left:28px;
+        right:28px;
+        text-align:center;
+        color:#00ff66;
+        font-family:'Poppins', sans-serif;
+        font-size:27px;
+        font-weight:900;
+        letter-spacing:.8px;
+        line-height:1.45;
+        text-shadow:
+            0 0 6px #00ff66,
+            0 0 16px #00ff66,
+            0 0 32px rgba(0,255,102,.95);
+        animation: naikMewah 16s linear infinite;
+        white-space:normal;
+    }}
+
+    .lux-dot {{
+        position:absolute;
+        width:10px;
+        height:10px;
+        border-radius:50%;
+        background:#FFD700;
+        box-shadow:0 0 14px #FFD700;
+        animation:kedipLampu 1.3s infinite;
+    }}
+
+    .dot1 {{ top:18px; left:18px; }}
+    .dot2 {{ top:18px; right:18px; animation-delay:.25s; }}
+    .dot3 {{ bottom:18px; left:18px; animation-delay:.5s; }}
+    .dot4 {{ bottom:18px; right:18px; animation-delay:.75s; }}
+
+    @keyframes naikMewah {{
+        0% {{ top:118%; opacity:0; }}
+        12% {{ opacity:1; }}
+        45% {{ top:48%; transform:translateY(-50%); opacity:1; }}
+        78% {{ opacity:1; }}
+        100% {{ top:-120%; opacity:0; }}
+    }}
+
+    @keyframes kedipLampu {{
+        0%,100% {{ opacity:1; transform:scale(1); }}
+        50% {{ opacity:.35; transform:scale(.75); }}
+    }}
+    </style>
+    </head>
+    <body>
+        <div class="lux-led-wrapper">
+            <div class="lux-dot dot1"></div>
+            <div class="lux-dot dot2"></div>
+            <div class="lux-dot dot3"></div>
+            <div class="lux-dot dot4"></div>
+            <div class="lux-led-title">INFORMASI MASJID JAMI AL-FALAH</div>
+            <div class="lux-led-text">{safe_text}</div>
+        </div>
+    </body>
+    </html>
+    """, height=175)
+
 def tampilkan_kartu_bank(judul, nilai, subjudul="", ikon="💳", tema="hijau"):
     warna = {
         "hijau": ("#064e3b", "#16a34a", "#bbf7d0"),
@@ -711,7 +817,7 @@ sholat = jadwal_sholat_cianjur()
 
 
 # =========================================================
-# V20.2 - WA OTOMATIS KEGIATAN & LAPORAN KEUANGAN
+# V20.3 - WA OTOMATIS KEGIATAN & LAPORAN KEUANGAN
 # =========================================================
 def laporan_keuangan_text():
     try:
@@ -873,7 +979,7 @@ try:
 except Exception:
     pass
 
-st.sidebar.title("🕌 APP AL-FALAH V20.2")
+st.sidebar.title("🕌 APP AL-FALAH V20.3")
 
 mode = st.sidebar.radio("Mode Aplikasi", ["👥 Jamaah", "🔐 Admin"])
 
@@ -1210,17 +1316,23 @@ h1, h2, h3 {
         with st.expander("📋 Lihat detail Iuran Rajaban"):
             detail_keuangan_box(kas_df, "Rajaban", "Iuran Rajaban")
 
-    st.markdown("### 📊 Ringkasan Cepat")
-    c4, c5, c6, c7 = st.columns(4)
-    c4.metric("⬆️ Total Pemasukan", rupiah(pemasukan))
-    c5.metric("⬇️ Total Pengeluaran", rupiah(pengeluaran))
-    c6.metric("📦 Total Kotak Amal", rupiah(total_kotak_amal))
-    c7.metric("📦 Buka Kotak Amal", f"{jumlah_buka_kotak} kali")
 
-    c8, c9, c10 = st.columns(3)
-    c8.metric("👥 Pengurus", sum(len(v) for v in pengurus.values()))
-    c9.metric("📢 Pengumuman Aktif", len(pengumuman_aktif_df))
-    c10.metric("📅 Agenda Tetap", len(agenda_tetap))
+
+    teks_led_mewah = (
+        "📢 Selamat datang di APP MASJID JAMI AL-FALAH • "
+        "Pengajian Malam Rabu pukul 19:30 WIB • "
+        "Pengajian Senenan pukul 07:30 WIB • "
+        "Syahriahan Sholawat malam Jumat awal bulan Hijriah • "
+        "Kas Masjid, Kas Madrasah, dan Iuran Rajaban dikelola secara transparan • "
+        "Pesan dan pengumuman resmi dikirim otomatis melalui Al-Falah Digital"
+    )
+
+    if not pengumuman_aktif_df.empty:
+        terakhir = pengumuman_aktif_df.tail(1).iloc[0]
+        teks_led_mewah = f"📢 PENGUMUMAN TERBARU • {terakhir['Judul']} • {terakhir['Isi']} • Pesan ini dikirim otomatis melalui Al-Falah Digital"
+
+    tampilkan_running_text_mewah(teks_led_mewah)
+
 
     st.divider()
 
