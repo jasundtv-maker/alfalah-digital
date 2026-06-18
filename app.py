@@ -10,7 +10,7 @@ import json
 import gspread
 from google.oauth2.service_account import Credentials
 
-st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V20.1", page_icon="🕌", layout="wide")
+st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V20.2", page_icon="🕌", layout="wide")
 
 KAS_FILE = "kas_masjid.csv"
 PENGUMUMAN_FILE = "pengumuman.csv"
@@ -671,6 +671,30 @@ def tampilkan_kartu_bank(judul, nilai, subjudul="", ikon="💳", tema="hijau"):
     </div>
     """, unsafe_allow_html=True)
 
+
+def detail_keuangan_box(kas_df, label_filter=None, judul="Detail Keuangan"):
+    df = kas_df.copy()
+
+    if label_filter:
+        df = df[df["Kategori"].astype(str).str.contains(label_filter, case=False, na=False)].copy()
+
+    if df.empty:
+        st.info(f"Belum ada data untuk {judul}.")
+        return
+
+    masuk = df[df["Jenis"] == "Pemasukan"]["Jumlah"].sum()
+    keluar = df[df["Jenis"] == "Pengeluaran"]["Jumlah"].sum()
+    saldo_detail = masuk - keluar
+
+    a, b, c = st.columns(3)
+    a.metric("Pemasukan", rupiah(masuk))
+    b.metric("Pengeluaran", rupiah(keluar))
+    c.metric("Saldo Akhir", rupiah(saldo_detail))
+
+    tampil = df.tail(20).copy()
+    tampil["Jumlah"] = tampil["Jumlah"].apply(rupiah)
+    st.dataframe(tampil, use_container_width=True)
+
 kas_df = load_kas()
 pengumuman_df = load_pengumuman()
 pengumuman_aktif_df = pengumuman_aktif_24jam(pengumuman_df)
@@ -687,7 +711,7 @@ sholat = jadwal_sholat_cianjur()
 
 
 # =========================================================
-# V20.1 - WA OTOMATIS KEGIATAN & LAPORAN KEUANGAN
+# V20.2 - WA OTOMATIS KEGIATAN & LAPORAN KEUANGAN
 # =========================================================
 def laporan_keuangan_text():
     try:
@@ -849,7 +873,7 @@ try:
 except Exception:
     pass
 
-st.sidebar.title("🕌 APP AL-FALAH V20.1")
+st.sidebar.title("🕌 APP AL-FALAH V20.2")
 
 mode = st.sidebar.radio("Mode Aplikasi", ["👥 Jamaah", "🔐 Admin"])
 
@@ -1169,27 +1193,34 @@ h1, h2, h3 {
     iuran_rajaban = kas_df[kas_df["Kategori"].astype(str).str.contains("Rajaban", case=False, na=False)]["Jumlah"].sum()
     jumlah_buka_kotak = len(kas_df[kas_df["Kategori"] == "Kotak Amal"])
 
-    st.markdown("## 💳 Kartu Keuangan Digital")
+    st.markdown("## 💳 Kartu Saldo Akhir")
     c1, c2, c3 = st.columns(3)
     with c1:
-        tampilkan_kartu_bank("Saldo Kas Masjid", rupiah(saldo), "Saldo akhir kas umum Masjid Jami Al-Falah", "💰", "hijau")
+        tampilkan_kartu_bank("Saldo Akhir Kas Masjid", rupiah(saldo), "Klik detail di bawah kartu", "💰", "hijau")
+        with st.expander("📋 Lihat detail Kas Masjid"):
+            detail_keuangan_box(kas_df, None, "Kas Masjid")
+
     with c2:
-        tampilkan_kartu_bank("Kas Madrasah", rupiah(kas_madrasah), "Ringkasan kategori Madrasah", "🏫", "biru")
+        tampilkan_kartu_bank("Saldo Akhir Kas Madrasah", rupiah(kas_madrasah), "Klik detail di bawah kartu", "🏫", "biru")
+        with st.expander("📋 Lihat detail Kas Madrasah"):
+            detail_keuangan_box(kas_df, "Madrasah", "Kas Madrasah")
+
     with c3:
-        tampilkan_kartu_bank("Iuran Rajaban", rupiah(iuran_rajaban), "Ringkasan kategori Rajaban", "🌙", "emas")
+        tampilkan_kartu_bank("Saldo Akhir Iuran Rajaban", rupiah(iuran_rajaban), "Klik detail di bawah kartu", "🌙", "emas")
+        with st.expander("📋 Lihat detail Iuran Rajaban"):
+            detail_keuangan_box(kas_df, "Rajaban", "Iuran Rajaban")
 
-    c4, c5, c6 = st.columns(3)
-    with c4:
-        tampilkan_kartu_bank("Total Pemasukan", rupiah(pemasukan), "Semua pemasukan tercatat", "⬆️", "hijau")
-    with c5:
-        tampilkan_kartu_bank("Total Pengeluaran", rupiah(pengeluaran), "Semua pengeluaran tercatat", "⬇️", "merah")
-    with c6:
-        tampilkan_kartu_bank("Total Kotak Amal", rupiah(total_kotak_amal), f"Dibuka {jumlah_buka_kotak} kali", "📦", "ungu")
+    st.markdown("### 📊 Ringkasan Cepat")
+    c4, c5, c6, c7 = st.columns(4)
+    c4.metric("⬆️ Total Pemasukan", rupiah(pemasukan))
+    c5.metric("⬇️ Total Pengeluaran", rupiah(pengeluaran))
+    c6.metric("📦 Total Kotak Amal", rupiah(total_kotak_amal))
+    c7.metric("📦 Buka Kotak Amal", f"{jumlah_buka_kotak} kali")
 
-    c7, c8, c9 = st.columns(3)
-    c7.metric("👥 Pengurus", sum(len(v) for v in pengurus.values()))
-    c8.metric("📢 Pengumuman Aktif", len(pengumuman_aktif_df))
-    c9.metric("📅 Agenda Tetap", len(agenda_tetap))
+    c8, c9, c10 = st.columns(3)
+    c8.metric("👥 Pengurus", sum(len(v) for v in pengurus.values()))
+    c9.metric("📢 Pengumuman Aktif", len(pengumuman_aktif_df))
+    c10.metric("📅 Agenda Tetap", len(agenda_tetap))
 
     st.divider()
 
