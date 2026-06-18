@@ -10,7 +10,7 @@ import json
 import gspread
 from google.oauth2.service_account import Credentials
 
-st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V21.0", page_icon="🕌", layout="wide")
+st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V21.1", page_icon="🕌", layout="wide")
 
 KAS_FILE = "kas_masjid.csv"
 PENGUMUMAN_FILE = "pengumuman.csv"
@@ -1061,6 +1061,160 @@ def tampilkan_mode_tv_masjid():
     </html>
     """, height=820)
 
+
+def status_badge_kegiatan(target_dt, mulai_dt=None, selesai_dt=None):
+    now = waktu_wib()
+    if mulai_dt and selesai_dt and mulai_dt <= now <= selesai_dt:
+        return "🔴 SEDANG BERLANGSUNG", "#dc2626"
+    selisih = target_dt - now
+    if selisih.total_seconds() < 0:
+        return "✅ SELESAI", "#16a34a"
+    if selisih.days == 0:
+        return "🟡 HARI INI", "#f59e0b"
+    if selisih.days == 1:
+        return "🟠 BESOK", "#ea580c"
+    return "🟢 AKAN DATANG", "#16a34a"
+
+def teks_countdown_singkat(target_dt):
+    now = waktu_wib()
+    diff = target_dt - now
+    if diff.total_seconds() <= 0:
+        return "Sedang berlangsung / sudah dimulai"
+    hari = diff.days
+    jam = diff.seconds // 3600
+    menit = (diff.seconds % 3600) // 60
+    if hari > 0:
+        return f"{hari} hari {jam} jam lagi"
+    if jam > 0:
+        return f"{jam} jam {menit} menit lagi"
+    return f"{menit} menit lagi"
+
+def nomor_pengisi(nama_pengisi):
+    try:
+        data = load_jamaah()
+        if data is None or data.empty:
+            return ""
+        nama_low = str(nama_pengisi).lower()
+        for _, r in data.iterrows():
+            nama_j = str(r.get("Nama", "")).lower()
+            if nama_j and (nama_j in nama_low or nama_low in nama_j):
+                return str(r.get("NoWA", "")).strip()
+    except Exception:
+        pass
+    return ""
+
+def kartu_jadwal_premium(judul, icon, tanggal, waktu, pengisi, catatan, tema="hijau", mulai_dt=None, selesai_dt=None):
+    warna = {
+        "hijau": ("#022c22", "#047857", "#34d399"),
+        "emas": ("#451a03", "#b45309", "#fbbf24"),
+        "biru": ("#0f172a", "#1d4ed8", "#60a5fa"),
+    }
+    a, b, c = warna.get(tema, warna["hijau"])
+    target_dt = mulai_dt if mulai_dt else waktu_wib()
+    badge, badge_color = status_badge_kegiatan(target_dt, mulai_dt, selesai_dt)
+    countdown = teks_countdown_singkat(target_dt)
+    nomor = nomor_pengisi(pengisi)
+    wa_link = f"https://wa.me/{nomor}" if nomor else "#"
+
+    st.markdown(f"""
+    <div style="
+        background:linear-gradient(135deg,{a},{b});
+        border:2px solid #FFD700;
+        border-radius:26px;
+        padding:24px;
+        color:white;
+        box-shadow:0 12px 30px rgba(0,0,0,.18);
+        position:relative;
+        overflow:hidden;
+        min-height:280px;
+        margin-bottom:18px;
+    ">
+        <div style="position:absolute;right:-40px;top:-40px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.12);"></div>
+        <div style="position:absolute;top:18px;right:18px;background:{badge_color};color:white;padding:7px 13px;border-radius:999px;font-size:13px;font-weight:900;">
+            {badge}
+        </div>
+        <div style="font-size:42px;margin-bottom:10px;">{icon}</div>
+        <div style="font-size:29px;font-weight:950;color:#fff;text-shadow:0 0 8px rgba(0,0,0,.35);margin-bottom:16px;">
+            {judul}
+        </div>
+        <div style="background:rgba(255,255,255,.10);border-radius:18px;padding:15px;margin-bottom:12px;border:1px solid rgba(255,255,255,.18);">
+            <div style="font-size:16px;line-height:1.75;">
+                📅 <b>Tanggal:</b> {tanggal}<br>
+                🕘 <b>Waktu:</b> {waktu}<br>
+                👳 <b>Pengisi:</b> {pengisi}<br>
+                ⏳ <b>Status:</b> {countdown}
+            </div>
+        </div>
+        <div style="font-size:14px;color:#fef3c7;line-height:1.5;margin-bottom:16px;">
+            {catatan}
+        </div>
+        <a href="{wa_link}" target="_blank" style="
+            display:inline-block;
+            text-decoration:none;
+            background:#25D366;
+            color:white;
+            font-weight:900;
+            padding:10px 16px;
+            border-radius:14px;
+        ">📲 Hubungi Pengisi</a>
+    </div>
+    """, unsafe_allow_html=True)
+
+def tampilkan_jadwal_premium_v211():
+    st.markdown("## 📌 Jadwal Pengajian Minggu Ini")
+
+    tgl_rabu = tanggal_berikutnya(1)
+    pengisi_rabu = pengajian_malam_rabu[index_rotasi_rabu(tgl_rabu)]
+    mulai_rabu = datetime.combine(tgl_rabu.date(), datetime.strptime("19:30", "%H:%M").time())
+    selesai_rabu = datetime.combine(tgl_rabu.date(), datetime.strptime("21:30", "%H:%M").time())
+
+    tgl_senin = tanggal_berikutnya(0)
+    pengisi_senin = pengajian_senin[index_rotasi_senin(tgl_senin)]
+    mulai_senin = datetime.combine(tgl_senin.date(), datetime.strptime("07:30", "%H:%M").time())
+    selesai_senin = datetime.combine(tgl_senin.date(), datetime.strptime("09:00", "%H:%M").time())
+
+    c1, c2 = st.columns(2)
+    with c1:
+        kartu_jadwal_premium(
+            "Pengajian Malam Rabu",
+            "📖",
+            format_tanggal(tgl_rabu),
+            "19:30 - 21:30 WIB",
+            pengisi_rabu,
+            "Catatan: Jika ustadz berhalangan, akan diganti oleh ustadz lain.",
+            "hijau",
+            mulai_dt=mulai_rabu,
+            selesai_dt=selesai_rabu
+        )
+    with c2:
+        kartu_jadwal_premium(
+            "Pengajian Senenan",
+            "🌸",
+            format_tanggal(tgl_senin),
+            "07:30 - 09:00 WIB",
+            pengisi_senin,
+            "Pengajian ibu-ibu Senenan. Jika ustadz berhalangan, akan diganti oleh ustadz lain.",
+            "emas",
+            mulai_dt=mulai_senin,
+            selesai_dt=selesai_senin
+        )
+
+    hari_kamis = tanggal_berikutnya(3)
+    mulai_syahriahan = datetime.combine(hari_kamis.date(), datetime.strptime("20:00", "%H:%M").time())
+    selesai_syahriahan = datetime.combine(hari_kamis.date(), datetime.strptime("21:30", "%H:%M").time())
+
+    kartu_jadwal_premium(
+        "Syahriahan Sholawat",
+        "🌙",
+        "Malam Jumat awal bulan Hijriah",
+        "Ba'da Isya / 20:00 - 21:30 WIB",
+        "Aang Deden Kasyful Anwar",
+        "Agenda bulanan pembacaan sholawat, dzikir, dan doa bersama masyarakat Masjid Jami Al-Falah.",
+        "biru",
+        mulai_dt=mulai_syahriahan,
+        selesai_dt=selesai_syahriahan
+    )
+
 kas_df = load_kas()
 pengumuman_df = load_pengumuman()
 pengumuman_aktif_df = pengumuman_aktif_24jam(pengumuman_df)
@@ -1137,7 +1291,7 @@ if auto:
 
 
 # =========================================================
-# V21.0 - WA OTOMATIS KEGIATAN & LAPORAN KEUANGAN
+# V21.1 - WA OTOMATIS KEGIATAN & LAPORAN KEUANGAN
 # =========================================================
 def laporan_keuangan_text():
     try:
@@ -1299,7 +1453,7 @@ try:
 except Exception:
     pass
 
-st.sidebar.title("🕌 APP AL-FALAH V21.0")
+st.sidebar.title("🕌 APP AL-FALAH V21.1")
 
 mode = st.sidebar.radio("Mode Aplikasi", ["👥 Jamaah", "🔐 Admin"])
 
