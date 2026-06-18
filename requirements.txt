@@ -1,9 +1,8 @@
 streamlit
+streamlit-option-menu
 pandas
-qrcode
-pillow
-requests
 gspread
 google-auth
+requests
 
 
