@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from google.oauth2.service_account import Credentials
 
 # =========================
-# KONFIGURASI
+# KONFIGURASI APP
 # =========================
 st.set_page_config(
     page_title="APP MASJID JAMI AL-FALAH V19.2",
@@ -16,10 +16,8 @@ st.set_page_config(
 WA_AUTO = True
 NOMOR_MASJID = "087742958453"
 
-# Isi di Streamlit Secrets:
-# FONNTE_TOKEN = "token_fonte_akang"
+# Ambil dari Streamlit Secrets
 FONNTE_TOKEN = st.secrets.get("FONNTE_TOKEN", "")
-
 SHEET_ID = st.secrets.get("SHEET_ID", "")
 
 # =========================
@@ -32,8 +30,10 @@ def koneksi_sheet():
         "https://www.googleapis.com/auth/drive"
     ]
 
+    # Format Secrets akang sekarang langsung berisi:
+    # type, project_id, private_key, client_email, dll
     creds = Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"],
+        dict(st.secrets),
         scopes=scope
     )
 
@@ -41,7 +41,13 @@ def koneksi_sheet():
     return client.open_by_key(SHEET_ID)
 
 
-sheet = koneksi_sheet()
+try:
+    sheet = koneksi_sheet()
+except Exception as e:
+    st.error("❌ Gagal koneksi ke Google Sheet.")
+    st.warning("Pastikan SHEET_ID dan data service account sudah benar di Streamlit Secrets.")
+    st.code(str(e))
+    st.stop()
 
 
 # =========================
@@ -50,7 +56,7 @@ sheet = koneksi_sheet()
 def pastikan_sheet_pengumuman():
     try:
         ws = sheet.worksheet("Pengumuman")
-    except:
+    except Exception:
         ws = sheet.add_worksheet(
             title="Pengumuman",
             rows=1000,
@@ -62,11 +68,12 @@ def pastikan_sheet_pengumuman():
             "Isi",
             "MasaAktifJam"
         ])
+
     return ws
 
 
 # =========================
-# KIRIM WA FONTE
+# KIRIM WA FONNTE / FONTE
 # =========================
 def kirim_wa_fonnte(target, pesan):
     if not WA_AUTO:
@@ -88,13 +95,15 @@ def kirim_wa_fonnte(target, pesan):
     }
 
     try:
-        r = requests.post(
+        response = requests.post(
             url,
             headers=headers,
             data=data,
             timeout=30
         )
-        return r.status_code == 200, r.text
+
+        return response.status_code == 200, response.text
+
     except Exception as e:
         return False, str(e)
 
@@ -119,8 +128,8 @@ def ambil_pengumuman_aktif():
             if datetime.now() <= expired:
                 aktif.append(row)
 
-        except:
-            pass
+        except Exception:
+            continue
 
     return aktif
 
@@ -163,6 +172,7 @@ Desa Sukasari, Karangtengah, Cianjur
 # SIDEBAR MENU
 # =========================
 st.sidebar.title("🕌 AL-FALAH V19.2")
+
 menu = st.sidebar.radio(
     "Menu",
     [
@@ -232,7 +242,10 @@ Wassalamu'alaikum Warahmatullahi Wabarakatuh."""
         judul_default = ""
         isi_default = ""
 
-    judul = st.text_input("Judul", value=judul_default)
+    judul = st.text_input(
+        "Judul",
+        value=judul_default
+    )
 
     isi = st.text_area(
         "Isi Pengumuman",
@@ -248,7 +261,7 @@ Wassalamu'alaikum Warahmatullahi Wabarakatuh."""
     )
 
     if st.button("💾 Simpan & Kirim WA"):
-        if not judul or not isi:
+        if not judul.strip() or not isi.strip():
             st.warning("Judul dan isi pengumuman wajib diisi.")
         else:
             sukses, respon = simpan_pengumuman(
@@ -293,7 +306,10 @@ Jika pesan ini masuk, berarti nomor baru masjid sudah berhasil terhubung dengan 
     )
 
     if st.button("🚀 Kirim Tes WA Sekarang"):
-        sukses, respon = kirim_wa_fonnte(target, pesan)
+        sukses, respon = kirim_wa_fonnte(
+            target,
+            pesan
+        )
 
         if sukses:
             st.success("✅ Tes WA berhasil dikirim.")
