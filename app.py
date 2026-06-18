@@ -4,20 +4,8 @@ import requests
 from datetime import datetime, timedelta
 from google.oauth2.service_account import Credentials
 
-# =========================================================
-# APP MASJID JAMI AL-FALAH V19.2
-# Fokus:
-# - Dashboard Pengumuman
-# - Admin Pengumuman
-# - Simpan ke Sheet "Pengumuman"
-# - Tes WA Fonte/Fonnte nomor masjid baru
-# =========================================================
-
-# =========================
-# KONFIGURASI APP
-# =========================
 st.set_page_config(
-    page_title="APP MASJID JAMI AL-FALAH V19.2",
+    page_title="APP MASJID JAMI AL-FALAH V19.3",
     page_icon="🕌",
     layout="wide"
 )
@@ -26,14 +14,8 @@ WA_AUTO = True
 NOMOR_MASJID = "087742958453"
 NAMA_SPREADSHEET = "Data Jamaah Al-Falah"
 
-# Secrets yang dipakai:
-# FONNTE_TOKEN = "token_fonnte_akang"
-# FONTE_DEVICE_ID = "6287742958453"  # boleh ada, tidak wajib dipakai di kode ini
 FONNTE_TOKEN = st.secrets.get("FONNTE_TOKEN", "")
 
-# =========================
-# KONEKSI GOOGLE SHEET
-# =========================
 @st.cache_resource
 def koneksi_sheet():
     scope = [
@@ -41,16 +23,12 @@ def koneksi_sheet():
         "https://www.googleapis.com/auth/drive"
     ]
 
-    # Format secrets akang: type, project_id, private_key, client_email, dll
-    # langsung di root secrets, bukan [gcp_service_account]
     creds = Credentials.from_service_account_info(
         dict(st.secrets),
         scopes=scope
     )
 
     client = gspread.authorize(creds)
-
-    # Tidak pakai SHEET_ID agar tidak error 404 kalau SHEET_ID kosong
     return client.open(NAMA_SPREADSHEET)
 
 
@@ -58,17 +36,11 @@ try:
     sheet = koneksi_sheet()
 except Exception as e:
     st.error("❌ Gagal koneksi ke Google Sheet.")
-    st.warning(
-        "Pastikan nama spreadsheet benar: Data Jamaah Al-Falah, "
-        "dan service account sudah diberi akses Editor ke Google Sheet."
-    )
+    st.warning("Pastikan service account sudah diberi akses Editor ke Google Sheet.")
     st.code(str(e))
     st.stop()
 
 
-# =========================
-# PASTIKAN SHEET PENGUMUMAN ADA
-# =========================
 def pastikan_sheet_pengumuman():
     try:
         ws = sheet.worksheet("Pengumuman")
@@ -84,13 +56,9 @@ def pastikan_sheet_pengumuman():
             "Isi",
             "MasaAktifJam"
         ])
-
     return ws
 
 
-# =========================
-# KIRIM WA FONNTE / FONTE
-# =========================
 def kirim_wa_fonnte(target, pesan):
     if not WA_AUTO:
         return False, "WA_AUTO masih OFF"
@@ -117,16 +85,11 @@ def kirim_wa_fonnte(target, pesan):
             data=data,
             timeout=30
         )
-
         return response.status_code == 200, response.text
-
     except Exception as e:
         return False, str(e)
 
 
-# =========================
-# AMBIL PENGUMUMAN AKTIF
-# =========================
 def ambil_pengumuman_aktif():
     ws = pastikan_sheet_pengumuman()
     data = ws.get_all_records()
@@ -150,9 +113,6 @@ def ambil_pengumuman_aktif():
     return aktif
 
 
-# =========================
-# SIMPAN PENGUMUMAN
-# =========================
 def simpan_pengumuman(judul, isi, masa_aktif_jam):
     ws = pastikan_sheet_pengumuman()
 
@@ -174,6 +134,8 @@ def simpan_pengumuman(judul, isi, masa_aktif_jam):
 🕌 Masjid Jami Al-Falah
 Kp. Caringin RT/RW 005/005
 Desa Sukasari, Karangtengah, Cianjur
+
+_Pesan ini dikirim otomatis oleh APP MASJID JAMI AL-FALAH._
 """
 
     sukses, respon = kirim_wa_fonnte(
@@ -184,10 +146,7 @@ Desa Sukasari, Karangtengah, Cianjur
     return sukses, respon
 
 
-# =========================
-# SIDEBAR MENU
-# =========================
-st.sidebar.title("🕌 AL-FALAH V19.2")
+st.sidebar.title("🕌 AL-FALAH V19.3")
 
 menu = st.sidebar.radio(
     "Menu",
@@ -199,9 +158,6 @@ menu = st.sidebar.radio(
 )
 
 
-# =========================
-# DASHBOARD
-# =========================
 if menu == "Dashboard":
     st.title("🕌 APP MASJID JAMI AL-FALAH")
     st.caption("Kp. Caringin RT/RW 005/005 Desa Sukasari")
@@ -223,9 +179,6 @@ if menu == "Dashboard":
         st.info("Belum ada pengumuman aktif.")
 
 
-# =========================
-# ADMIN PENGUMUMAN
-# =========================
 elif menu == "Admin Pengumuman":
     st.title("📢 Admin Pengumuman Masjid")
 
@@ -248,6 +201,7 @@ Insya Allah akan dilaksanakan kegiatan Syahriahan Masjid Jami Al-Falah pada:
 🗓 Kamis malam Jumat
 🕖 Ba'da Isya
 📍 Masjid Jami Al-Falah Kp. Caringin
+👳 Pemimpin: Aang Deden Kasyful Anwar
 
 Kami mengundang seluruh jamaah dan masyarakat untuk hadir bersama-sama dalam pembacaan sholawat, dzikir, dan doa.
 
@@ -276,15 +230,12 @@ Wassalamu'alaikum Warahmatullahi Wabarakatuh."""
         judul_default = ""
         isi_default = ""
 
-    judul = st.text_input(
-        "Judul",
-        value=judul_default
-    )
+    judul = st.text_input("Judul", value=judul_default)
 
     isi = st.text_area(
         "Isi Pengumuman",
         value=isi_default,
-        height=280
+        height=300
     )
 
     masa_aktif = st.number_input(
@@ -314,9 +265,6 @@ Wassalamu'alaikum Warahmatullahi Wabarakatuh."""
             st.code(respon)
 
 
-# =========================
-# TES WA FONTE
-# =========================
 elif menu == "Tes WA Fonte":
     st.title("📲 Tes WA Fonte Nomor Masjid")
 
@@ -331,19 +279,18 @@ elif menu == "Tes WA Fonte":
         "Pesan Tes",
         value="""Assalamu'alaikum.
 
-Tes WA otomatis dari APP MASJID JAMI AL-FALAH V19.2.
+Tes WA otomatis dari APP MASJID JAMI AL-FALAH V19.3.
 
 Jika pesan ini masuk, berarti nomor baru masjid sudah berhasil terhubung dengan Fonte/Fonnte.
 
-🕌 Masjid Jami Al-Falah""",
-        height=220
+🕌 Masjid Jami Al-Falah
+
+_Pesan ini dikirim otomatis oleh APP MASJID JAMI AL-FALAH._""",
+        height=250
     )
 
     if st.button("🚀 Kirim Tes WA Sekarang"):
-        sukses, respon = kirim_wa_fonnte(
-            target,
-            pesan
-        )
+        sukses, respon = kirim_wa_fonnte(target, pesan)
 
         if sukses:
             st.success("✅ Tes WA berhasil dikirim.")
