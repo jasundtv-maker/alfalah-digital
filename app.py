@@ -10,7 +10,7 @@ import json
 import gspread
 from google.oauth2.service_account import Credentials
 
-st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V20.3", page_icon="🕌", layout="wide")
+st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V20.4", page_icon="🕌", layout="wide")
 
 KAS_FILE = "kas_masjid.csv"
 PENGUMUMAN_FILE = "pengumuman.csv"
@@ -641,110 +641,53 @@ def status_pengajian_terdekat():
 
 
 
-def tampilkan_running_text_mewah(teks):
+
+def tampilkan_running_text_mewah(teks, mode_status="SELAMAT DATANG"):
     safe_text = str(teks).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    safe_status = str(mode_status).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     components.html(f"""
     <html>
     <head>
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&family=Poppins:wght@600;700;800;900&display=swap');
-
-    body {{
-        margin:0;
-        padding:0;
-        background:transparent;
-    }}
-
+    body {{ margin:0; padding:0; background:transparent; }}
     .lux-led-wrapper {{
-        background:
-            radial-gradient(circle at top left, rgba(255,215,0,.30), transparent 30%),
-            radial-gradient(circle at bottom right, rgba(0,255,120,.20), transparent 35%),
-            linear-gradient(135deg,#020617,#064e3b,#022c22);
-        border:3px solid #FFD700;
-        border-radius:26px;
-        height:150px;
-        overflow:hidden;
-        position:relative;
-        box-shadow:
-            0 0 26px rgba(255,215,0,.90),
-            inset 0 0 24px rgba(0,255,102,.18);
+        background:radial-gradient(circle at top left, rgba(255,215,0,.30), transparent 30%), radial-gradient(circle at bottom right, rgba(0,255,120,.20), transparent 35%), linear-gradient(135deg,#020617,#064e3b,#022c22);
+        border:3px solid #FFD700;border-radius:26px;height:138px;overflow:hidden;position:relative;
+        box-shadow:0 0 26px rgba(255,215,0,.90), inset 0 0 24px rgba(0,255,102,.18);
     }}
-
     .lux-led-title {{
-        position:absolute;
-        top:10px;
-        left:0;
-        right:0;
-        text-align:center;
-        color:#FFD700;
-        font-family:'Cinzel', serif;
-        font-size:22px;
-        font-weight:900;
-        letter-spacing:2px;
-        text-shadow:0 0 8px #FFD700,0 0 20px rgba(255,215,0,.85);
-        z-index:2;
+        position:absolute;top:10px;left:0;right:0;text-align:center;color:#FFD700;font-family:'Cinzel', serif;
+        font-size:21px;font-weight:900;letter-spacing:2px;text-shadow:0 0 8px #FFD700,0 0 20px rgba(255,215,0,.85);z-index:2;
     }}
-
     .lux-led-text {{
-        position:absolute;
-        left:28px;
-        right:28px;
-        text-align:center;
-        color:#00ff66;
-        font-family:'Poppins', sans-serif;
-        font-size:27px;
-        font-weight:900;
-        letter-spacing:.8px;
-        line-height:1.45;
-        text-shadow:
-            0 0 6px #00ff66,
-            0 0 16px #00ff66,
-            0 0 32px rgba(0,255,102,.95);
-        animation: naikMewah 16s linear infinite;
-        white-space:normal;
+        position:absolute;left:34px;right:34px;text-align:center;color:#00ff66;font-family:'Poppins', sans-serif;
+        font-size:24px;font-weight:900;letter-spacing:.5px;line-height:1.45;
+        text-shadow:0 0 6px #00ff66,0 0 16px #00ff66,0 0 32px rgba(0,255,102,.95);
+        animation: naikMewah 24s linear infinite;white-space:normal;
     }}
-
-    .lux-dot {{
-        position:absolute;
-        width:10px;
-        height:10px;
-        border-radius:50%;
-        background:#FFD700;
-        box-shadow:0 0 14px #FFD700;
-        animation:kedipLampu 1.3s infinite;
-    }}
-
-    .dot1 {{ top:18px; left:18px; }}
-    .dot2 {{ top:18px; right:18px; animation-delay:.25s; }}
-    .dot3 {{ bottom:18px; left:18px; animation-delay:.5s; }}
-    .dot4 {{ bottom:18px; right:18px; animation-delay:.75s; }}
-
+    .lux-dot {{ position:absolute;width:10px;height:10px;border-radius:50%;background:#FFD700;box-shadow:0 0 14px #FFD700;animation:kedipLampu 1.3s infinite; }}
+    .dot1 {{ top:18px; left:18px; }} .dot2 {{ top:18px; right:18px; animation-delay:.25s; }}
+    .dot3 {{ bottom:18px; left:18px; animation-delay:.5s; }} .dot4 {{ bottom:18px; right:18px; animation-delay:.75s; }}
     @keyframes naikMewah {{
-        0% {{ top:118%; opacity:0; }}
-        12% {{ opacity:1; }}
-        45% {{ top:48%; transform:translateY(-50%); opacity:1; }}
-        78% {{ opacity:1; }}
+        0% {{ top:115%; opacity:0; }}
+        10% {{ opacity:1; }}
+        42% {{ top:50%; transform:translateY(-50%); opacity:1; }}
+        72% {{ top:50%; transform:translateY(-50%); opacity:1; }}
         100% {{ top:-120%; opacity:0; }}
     }}
-
-    @keyframes kedipLampu {{
-        0%,100% {{ opacity:1; transform:scale(1); }}
-        50% {{ opacity:.35; transform:scale(.75); }}
-    }}
+    @keyframes kedipLampu {{ 0%,100% {{ opacity:1; transform:scale(1); }} 50% {{ opacity:.35; transform:scale(.75); }} }}
     </style>
     </head>
     <body>
         <div class="lux-led-wrapper">
-            <div class="lux-dot dot1"></div>
-            <div class="lux-dot dot2"></div>
-            <div class="lux-dot dot3"></div>
-            <div class="lux-dot dot4"></div>
-            <div class="lux-led-title">INFORMASI MASJID JAMI AL-FALAH</div>
+            <div class="lux-dot dot1"></div><div class="lux-dot dot2"></div><div class="lux-dot dot3"></div><div class="lux-dot dot4"></div>
+            <div class="lux-led-title">{safe_status} • MASJID JAMI AL-FALAH</div>
             <div class="lux-led-text">{safe_text}</div>
         </div>
     </body>
     </html>
-    """, height=175)
+    """, height=160)
 
 def tampilkan_kartu_bank(judul, nilai, subjudul="", ikon="💳", tema="hijau"):
     warna = {
@@ -801,6 +744,108 @@ def detail_keuangan_box(kas_df, label_filter=None, judul="Detail Keuangan"):
     tampil["Jumlah"] = tampil["Jumlah"].apply(rupiah)
     st.dataframe(tampil, use_container_width=True)
 
+
+def angka_sheet(x):
+    try:
+        s = str(x).replace("Rp", "").replace(".", "").replace(",", "").replace(" ", "").strip()
+        if s == "" or s.lower() == "nan":
+            return 0
+        return float(s)
+    except Exception:
+        return 0
+
+def load_kas_terpisah(sheet_name):
+    try:
+        df = load_sheet_csv(sheet_name)
+        if df is None or df.empty:
+            return pd.DataFrame(columns=["Tanggal", "Keterangan", "Masuk", "Keluar", "Petugas"])
+
+        for col in ["Tanggal", "Keterangan", "Masuk", "Keluar", "Petugas"]:
+            if col not in df.columns:
+                df[col] = ""
+
+        df = df[["Tanggal", "Keterangan", "Masuk", "Keluar", "Petugas"]].copy()
+        df["Masuk"] = df["Masuk"].apply(angka_sheet)
+        df["Keluar"] = df["Keluar"].apply(angka_sheet)
+        return df
+    except Exception:
+        return pd.DataFrame(columns=["Tanggal", "Keterangan", "Masuk", "Keluar", "Petugas"])
+
+def saldo_kas_terpisah(sheet_name):
+    df = load_kas_terpisah(sheet_name)
+    masuk = df["Masuk"].sum() if not df.empty else 0
+    keluar = df["Keluar"].sum() if not df.empty else 0
+    return masuk, keluar, masuk - keluar, df
+
+def detail_keuangan_terpisah_box(df, judul="Detail Keuangan"):
+    if df is None or df.empty:
+        st.info(f"Belum ada data untuk {judul}.")
+        return
+
+    masuk = df["Masuk"].sum()
+    keluar = df["Keluar"].sum()
+    saldo_detail = masuk - keluar
+
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg,#020617,#064e3b);border:2px solid #FFD700;border-radius:22px;padding:18px;color:white;margin-bottom:12px;box-shadow:0 0 18px rgba(255,215,0,.45);">
+        <div style="font-size:20px;font-weight:900;color:#FFD700;margin-bottom:10px;">{judul}</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:150px;background:rgba(255,255,255,.08);padding:14px;border-radius:16px;">
+                <div style="font-size:13px;color:#bbf7d0;font-weight:800;">Pemasukan</div>
+                <div style="font-size:26px;font-weight:950;color:#00ff66;">{rupiah(masuk)}</div>
+            </div>
+            <div style="flex:1;min-width:150px;background:rgba(255,255,255,.08);padding:14px;border-radius:16px;">
+                <div style="font-size:13px;color:#fecaca;font-weight:800;">Pengeluaran</div>
+                <div style="font-size:26px;font-weight:950;color:#f87171;">{rupiah(keluar)}</div>
+            </div>
+            <div style="flex:1;min-width:150px;background:rgba(255,255,255,.08);padding:14px;border-radius:16px;">
+                <div style="font-size:13px;color:#fef3c7;font-weight:800;">Saldo Akhir</div>
+                <div style="font-size:26px;font-weight:950;color:#FFD700;">{rupiah(saldo_detail)}</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    tampil = df.tail(20).copy()
+    tampil["Masuk"] = tampil["Masuk"].apply(rupiah)
+    tampil["Keluar"] = tampil["Keluar"].apply(rupiah)
+    st.dataframe(tampil, use_container_width=True, hide_index=True)
+
+def detail_keuangan_masjid_box(kas_df):
+    if kas_df is None or kas_df.empty:
+        st.info("Belum ada data Kas Masjid.")
+        return
+
+    df = kas_df.copy()
+    masuk = df[df["Jenis"] == "Pemasukan"]["Jumlah"].sum()
+    keluar = df[df["Jenis"] == "Pengeluaran"]["Jumlah"].sum()
+    saldo_detail = masuk - keluar
+
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg,#020617,#065f46);border:2px solid #FFD700;border-radius:22px;padding:18px;color:white;margin-bottom:12px;box-shadow:0 0 18px rgba(255,215,0,.45);">
+        <div style="font-size:20px;font-weight:900;color:#FFD700;margin-bottom:10px;">Detail Kas Masjid</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:150px;background:rgba(255,255,255,.08);padding:14px;border-radius:16px;">
+                <div style="font-size:13px;color:#bbf7d0;font-weight:800;">Pemasukan</div>
+                <div style="font-size:26px;font-weight:950;color:#00ff66;">{rupiah(masuk)}</div>
+            </div>
+            <div style="flex:1;min-width:150px;background:rgba(255,255,255,.08);padding:14px;border-radius:16px;">
+                <div style="font-size:13px;color:#fecaca;font-weight:800;">Pengeluaran</div>
+                <div style="font-size:26px;font-weight:950;color:#f87171;">{rupiah(keluar)}</div>
+            </div>
+            <div style="flex:1;min-width:150px;background:rgba(255,255,255,.08);padding:14px;border-radius:16px;">
+                <div style="font-size:13px;color:#fef3c7;font-weight:800;">Saldo Akhir</div>
+                <div style="font-size:26px;font-weight:950;color:#FFD700;">{rupiah(saldo_detail)}</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    tampil = df.tail(20).copy()
+    tampil["Jumlah"] = tampil["Jumlah"].apply(rupiah)
+    st.dataframe(tampil, use_container_width=True, hide_index=True)
+
+
 kas_df = load_kas()
 pengumuman_df = load_pengumuman()
 pengumuman_aktif_df = pengumuman_aktif_24jam(pengumuman_df)
@@ -817,7 +862,7 @@ sholat = jadwal_sholat_cianjur()
 
 
 # =========================================================
-# V20.3 - WA OTOMATIS KEGIATAN & LAPORAN KEUANGAN
+# V20.4 - WA OTOMATIS KEGIATAN & LAPORAN KEUANGAN
 # =========================================================
 def laporan_keuangan_text():
     try:
@@ -979,7 +1024,7 @@ try:
 except Exception:
     pass
 
-st.sidebar.title("🕌 APP AL-FALAH V20.3")
+st.sidebar.title("🕌 APP AL-FALAH V20.4")
 
 mode = st.sidebar.radio("Mode Aplikasi", ["👥 Jamaah", "🔐 Admin"])
 
@@ -1184,59 +1229,6 @@ h1, h2, h3 {
     </script>
     """, height=95)
 
-    running_text = "📢 Selamat datang di APP MASJID JAMI AL-FALAH | Jadwal pengajian, kas masjid, pengurus dan pengumuman dapat dilihat langsung di dashboard ini."
-    if not pengumuman_aktif_df.empty:
-        terakhir = pengumuman_aktif_df.tail(1).iloc[0]
-        running_text = f"📢 Pengumuman Terbaru: {terakhir['Judul']} - {terakhir['Isi']}"
-
-    safe_running_text = str(running_text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-    components.html(f"""
-    <html>
-    <head>
-    <style>
-    body {{ margin:0; padding:0; background:transparent; font-family:Arial, sans-serif; }}
-    .vertical-led-box {{
-        background:#020617;
-        border:3px solid #FFD700;
-        border-radius:18px;
-        height:86px;
-        overflow:hidden;
-        box-shadow:0 0 22px rgba(255,215,0,.75), inset 0 0 20px rgba(0,255,102,.18);
-        position:relative;
-    }}
-    .vertical-led-text {{
-        position:absolute;
-        left:0;
-        right:0;
-        text-align:center;
-        color:#00ff66;
-        font-size:23px;
-        font-weight:950;
-        letter-spacing:1px;
-        line-height:1.45;
-        text-shadow:0 0 6px #00ff66,0 0 14px #00ff66,0 0 28px #00ff66;
-        animation: naikVertical 13s linear infinite;
-        padding:0 18px;
-        box-sizing:border-box;
-        white-space:normal;
-    }}
-    @keyframes naikVertical {{
-        0% {{ top:-110%; opacity:0; }}
-        12% {{ opacity:1; }}
-        45% {{ top:28%; opacity:1; }}
-        78% {{ opacity:1; }}
-        100% {{ top:120%; opacity:0; }}
-    }}
-    </style>
-    </head>
-    <body>
-        <div class="vertical-led-box">
-            <div class="vertical-led-text">{safe_running_text}</div>
-        </div>
-    </body>
-    </html>
-    """, height=105)
-
     agenda_status, status_pengajian = status_pengajian_terdekat()
     target_js = agenda_status["target"].strftime("%Y-%m-%dT%H:%M:%S")
 
@@ -1295,8 +1287,8 @@ h1, h2, h3 {
     pengeluaran = kas_df[kas_df["Jenis"] == "Pengeluaran"]["Jumlah"].sum()
     saldo = pemasukan - pengeluaran
     total_kotak_amal = kas_df[kas_df["Kategori"] == "Kotak Amal"]["Jumlah"].sum()
-    kas_madrasah = kas_df[kas_df["Kategori"].astype(str).str.contains("Madrasah", case=False, na=False)]["Jumlah"].sum()
-    iuran_rajaban = kas_df[kas_df["Kategori"].astype(str).str.contains("Rajaban", case=False, na=False)]["Jumlah"].sum()
+    madrasah_masuk, madrasah_keluar, kas_madrasah, df_kas_madrasah = saldo_kas_terpisah("Kas Madrasah")
+    rajaban_masuk, rajaban_keluar, iuran_rajaban, df_kas_rajaban = saldo_kas_terpisah("Kas Rajaban")
     jumlah_buka_kotak = len(kas_df[kas_df["Kategori"] == "Kotak Amal"])
 
     st.markdown("## 💳 Kartu Saldo Akhir")
@@ -1304,34 +1296,35 @@ h1, h2, h3 {
     with c1:
         tampilkan_kartu_bank("Saldo Akhir Kas Masjid", rupiah(saldo), "Klik detail di bawah kartu", "💰", "hijau")
         with st.expander("📋 Lihat detail Kas Masjid"):
-            detail_keuangan_box(kas_df, None, "Kas Masjid")
+            detail_keuangan_masjid_box(kas_df)
 
     with c2:
         tampilkan_kartu_bank("Saldo Akhir Kas Madrasah", rupiah(kas_madrasah), "Klik detail di bawah kartu", "🏫", "biru")
         with st.expander("📋 Lihat detail Kas Madrasah"):
-            detail_keuangan_box(kas_df, "Madrasah", "Kas Madrasah")
+            detail_keuangan_terpisah_box(df_kas_madrasah, "Detail Kas Madrasah")
 
     with c3:
         tampilkan_kartu_bank("Saldo Akhir Iuran Rajaban", rupiah(iuran_rajaban), "Klik detail di bawah kartu", "🌙", "emas")
         with st.expander("📋 Lihat detail Iuran Rajaban"):
-            detail_keuangan_box(kas_df, "Rajaban", "Iuran Rajaban")
+            detail_keuangan_terpisah_box(df_kas_rajaban, "Detail Iuran Rajaban")
 
 
 
     teks_led_mewah = (
-        "📢 Selamat datang di APP MASJID JAMI AL-FALAH • "
+        "Selamat datang di Sistem Informasi Masjid Jami Al-Falah • "
         "Pengajian Malam Rabu pukul 19:30 WIB • "
         "Pengajian Senenan pukul 07:30 WIB • "
         "Syahriahan Sholawat malam Jumat awal bulan Hijriah • "
-        "Kas Masjid, Kas Madrasah, dan Iuran Rajaban dikelola secara transparan • "
-        "Pesan dan pengumuman resmi dikirim otomatis melalui Al-Falah Digital"
+        "Kas Masjid, Kas Madrasah, dan Iuran Rajaban dikelola secara transparan"
     )
+    mode_led = "SELAMAT DATANG"
 
     if not pengumuman_aktif_df.empty:
         terakhir = pengumuman_aktif_df.tail(1).iloc[0]
-        teks_led_mewah = f"📢 PENGUMUMAN TERBARU • {terakhir['Judul']} • {terakhir['Isi']} • Pesan ini dikirim otomatis melalui Al-Falah Digital"
+        teks_led_mewah = f"{terakhir['Judul']} • {terakhir['Isi']} • Pesan ini dikirim otomatis melalui Al-Falah Digital"
+        mode_led = "PENGUMUMAN"
 
-    tampilkan_running_text_mewah(teks_led_mewah)
+    tampilkan_running_text_mewah(teks_led_mewah, mode_led)
 
 
     st.divider()
