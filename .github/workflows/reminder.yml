@@ -1,55 +1,34 @@
-name: Pengingat Al-Falah Digital
+name: Al-Falah Digital V21 Auto
 
 on:
   schedule:
-    - cron: "0 5 * * 2"   # Selasa 12:00 WIB
-    - cron: "0 13 * * 0"  # Minggu 20:00 WIB
-    - cron: "0 5 * * 4"   # Kamis 12:00 WIB cek Syahriahan
+    - cron: "0 13 * * 0"   # Minggu 20:00 WIB
+    - cron: "0 5 * * 2"    # Selasa 12:00 WIB
+    - cron: "0 9 * * 4"    # Kamis 16:00 WIB
+    - cron: "0 1 1 * *"    # Tanggal 1 jam 08:00 WIB
   workflow_dispatch:
 
 jobs:
-  pengingat:
+  notify:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - run: pip install requests gspread google-auth
-
-      - name: Kirim Pengingat Telegram
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      - name: Tentukan endpoint
         run: |
-          DAY=$(date -u +%u)
-
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            REMINDER_MODE=pengajian_laki python reminder.py
-          elif [ "$DAY" = "2" ]; then
-            REMINDER_MODE=pengajian_laki python reminder.py
-          elif [ "$DAY" = "4" ]; then
-            REMINDER_MODE=syahriahan python reminder.py
-          elif [ "$DAY" = "7" ]; then
-            REMINDER_MODE=pengajian_senin python reminder.py
+          DOW=$(date -u +%u)
+          DOM=$(date -u +%d)
+          HOUR=$(date -u +%H)
+          if [ "$DOM" = "01" ] && [ "$HOUR" = "01" ]; then
+            echo "AUTO=laporan_bulanan" >> $GITHUB_ENV
+          elif [ "$DOW" = "7" ]; then
+            echo "AUTO=senenan" >> $GITHUB_ENV
+          elif [ "$DOW" = "2" ]; then
+            echo "AUTO=malam_rabu" >> $GITHUB_ENV
+          elif [ "$DOW" = "4" ]; then
+            echo "AUTO=syahriahan" >> $GITHUB_ENV
+          else
+            echo "AUTO=senenan" >> $GITHUB_ENV
           fi
 
-      - name: Kirim Pengingat WhatsApp
-        env:
-          FONNTE_TOKEN: ${{ secrets.FONNTE_TOKEN }}
-          GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      - name: Jalankan Auto Broadcast
         run: |
-          DAY=$(date -u +%u)
-
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            REMINDER_MODE=pengajian_laki python reminder_wa.py
-          elif [ "$DAY" = "2" ]; then
-            REMINDER_MODE=pengajian_laki python reminder_wa.py
-          elif [ "$DAY" = "4" ]; then
-            REMINDER_MODE=syahriahan python reminder_wa.py
-          elif [ "$DAY" = "7" ]; then
-            REMINDER_MODE=pengajian_senin python reminder_wa.py
-          fi
+          curl -L "https://kas-masjid-alfalah.streamlit.app/?auto=${AUTO}&run=1"
