@@ -10,7 +10,7 @@ import json
 import gspread
 from google.oauth2.service_account import Credentials
 
-st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V21.1", page_icon="🕌", layout="wide")
+st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V21.2", page_icon="🕌", layout="wide")
 
 KAS_FILE = "kas_masjid.csv"
 PENGUMUMAN_FILE = "pengumuman.csv"
@@ -1215,6 +1215,75 @@ def tampilkan_jadwal_premium_v211():
         selesai_dt=selesai_syahriahan
     )
 
+
+def save_kas_terpisah(sheet_name, df):
+    """Simpan dataframe ke tab khusus: Kas Madrasah / Kas Rajaban."""
+    try:
+        ws = sheet.worksheet(sheet_name)
+    except Exception:
+        ws = sheet.add_worksheet(title=sheet_name, rows=1000, cols=5)
+
+    df = df.copy()
+    for col in ["Tanggal", "Keterangan", "Masuk", "Keluar", "Petugas"]:
+        if col not in df.columns:
+            df[col] = ""
+
+    df = df[["Tanggal", "Keterangan", "Masuk", "Keluar", "Petugas"]]
+    ws.clear()
+    ws.append_row(["Tanggal", "Keterangan", "Masuk", "Keluar", "Petugas"])
+    if not df.empty:
+        ws.append_rows(df.astype(str).values.tolist())
+
+def simpan_input_kas_terarah(tanggal, jenis, kategori, keterangan, jumlah, petugas):
+    """
+    Routing kas:
+    - Kas Madrasah -> tab Kas Madrasah
+    - Iuran Rajaban -> tab Kas Rajaban
+    - Kategori lain -> kas masjid utama
+    """
+    global kas_df
+
+    kategori_text = str(kategori).strip().lower()
+
+    if kategori_text == "kas madrasah":
+        df_khusus = load_kas_terpisah("Kas Madrasah")
+        data = pd.DataFrame([{
+            "Tanggal": str(tanggal),
+            "Keterangan": keterangan,
+            "Masuk": jumlah if jenis == "Pemasukan" else 0,
+            "Keluar": jumlah if jenis == "Pengeluaran" else 0,
+            "Petugas": petugas
+        }])
+        df_khusus = pd.concat([df_khusus, data], ignore_index=True)
+        save_kas_terpisah("Kas Madrasah", df_khusus)
+        return "Kas Madrasah"
+
+    elif kategori_text == "iuran rajaban":
+        df_khusus = load_kas_terpisah("Kas Rajaban")
+        data = pd.DataFrame([{
+            "Tanggal": str(tanggal),
+            "Keterangan": keterangan,
+            "Masuk": jumlah if jenis == "Pemasukan" else 0,
+            "Keluar": jumlah if jenis == "Pengeluaran" else 0,
+            "Petugas": petugas
+        }])
+        df_khusus = pd.concat([df_khusus, data], ignore_index=True)
+        save_kas_terpisah("Kas Rajaban", df_khusus)
+        return "Kas Rajaban"
+
+    else:
+        data = pd.DataFrame([{
+            "Tanggal": str(tanggal),
+            "Jenis": jenis,
+            "Kategori": kategori,
+            "Keterangan": keterangan,
+            "Jumlah": jumlah,
+            "Petugas": petugas
+        }])
+        kas_df = pd.concat([kas_df, data], ignore_index=True)
+        save_kas(kas_df)
+        return "Kas Masjid"
+
 kas_df = load_kas()
 pengumuman_df = load_pengumuman()
 pengumuman_aktif_df = pengumuman_aktif_24jam(pengumuman_df)
@@ -1291,7 +1360,7 @@ if auto:
 
 
 # =========================================================
-# V21.1 - WA OTOMATIS KEGIATAN & LAPORAN KEUANGAN
+# V21.2 - WA OTOMATIS KEGIATAN & LAPORAN KEUANGAN
 # =========================================================
 def laporan_keuangan_text():
     try:
@@ -1453,7 +1522,7 @@ try:
 except Exception:
     pass
 
-st.sidebar.title("🕌 APP AL-FALAH V21.1")
+st.sidebar.title("🕌 APP AL-FALAH V21.2")
 
 mode = st.sidebar.radio("Mode Aplikasi", ["👥 Jamaah", "🔐 Admin"])
 
@@ -1918,11 +1987,28 @@ elif menu == "💰 Input Kas":
         petugas = st.text_input("Petugas", value="Aceng Abdul Roup")
         simpan = st.form_submit_button("💾 Simpan Kas")
     if simpan:
-        data = pd.DataFrame([{"Tanggal": str(tanggal), "Jenis": jenis, "Kategori": kategori, "Keterangan": keterangan, "Jumlah": jumlah, "Petugas": petugas}])
-        kas_df = pd.concat([kas_df, data], ignore_index=True)
-        save_kas(kas_df)
-        kirim_telegram(f"🕌 APP MASJID JAMI AL-FALAH\n\nData Kas Baru\nJenis: {jenis}\nKategori: {kategori}\nTanggal: {tanggal}\nJumlah: {rupiah(jumlah)}\nPetugas: {petugas}\nKeterangan: {keterangan}")
-        st.success("Data kas berhasil disimpan.")
+                tujuan_simpan = simpan_input_kas_terarah(
+                    tanggal=tanggal,
+                    jenis=jenis,
+                    kategori=kategori,
+                    keterangan=keterangan,
+                    jumlah=jumlah,
+                    petugas=petugas
+                )
+
+                kirim_telegram(
+                    f"🕌 APP MASJID JAMI AL-FALAH\n\n"
+                    f"Data Kas Baru\n"
+                    f"Jenis: {jenis}\n"
+                    f"Kategori: {kategori}\n"
+                    f"Disimpan ke: {tujuan_simpan}\n"
+                    f"Tanggal: {tanggal}\n"
+                    f"Jumlah: {rupiah(jumlah)}\n"
+                    f"Petugas: {petugas}\n"
+                    f"Keterangan: {keterangan}"
+                )
+
+                st.success(f"Data kas berhasil disimpan ke {tujuan_simpan}.")
 
 elif menu == "📦 Input Kotak Amal":
     st.subheader("📦 Input Kotak Amal Admin")
