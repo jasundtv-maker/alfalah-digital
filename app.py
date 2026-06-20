@@ -10,7 +10,7 @@ import json
 import gspread
 from google.oauth2.service_account import Credentials
 
-st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V21.2", page_icon="🕌", layout="wide")
+st.set_page_config(page_title="APP MASJID JAMI AL-FALAH V21.3", page_icon="🕌", layout="wide")
 
 KAS_FILE = "kas_masjid.csv"
 PENGUMUMAN_FILE = "pengumuman.csv"
@@ -1218,10 +1218,14 @@ def tampilkan_jadwal_premium_v211():
 
 def save_kas_terpisah(sheet_name, df):
     """Simpan dataframe ke tab khusus: Kas Madrasah / Kas Rajaban."""
+    sh, info = koneksi_google_sheet_write()
+    if sh is None:
+        raise Exception(f"Gagal koneksi Google Sheet: {info}")
+
     try:
-        ws = sheet.worksheet(sheet_name)
+        ws = sh.worksheet(sheet_name)
     except Exception:
-        ws = sheet.add_worksheet(title=sheet_name, rows=1000, cols=5)
+        ws = sh.add_worksheet(title=sheet_name, rows=1000, cols=5)
 
     df = df.copy()
     for col in ["Tanggal", "Keterangan", "Masuk", "Keluar", "Petugas"]:
@@ -1360,7 +1364,7 @@ if auto:
 
 
 # =========================================================
-# V21.2 - WA OTOMATIS KEGIATAN & LAPORAN KEUANGAN
+# V21.3 - WA OTOMATIS KEGIATAN & LAPORAN KEUANGAN
 # =========================================================
 def laporan_keuangan_text():
     try:
@@ -1522,7 +1526,7 @@ try:
 except Exception:
     pass
 
-st.sidebar.title("🕌 APP AL-FALAH V21.2")
+st.sidebar.title("🕌 APP AL-FALAH V21.3")
 
 mode = st.sidebar.radio("Mode Aplikasi", ["👥 Jamaah", "🔐 Admin"])
 
