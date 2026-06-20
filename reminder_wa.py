@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import requests
 import gspread
 from datetime import datetime, timedelta
@@ -11,6 +12,9 @@ MODE = os.getenv("REMINDER_MODE", "pengajian_laki")
 FONNTE_TOKEN = os.getenv("FONNTE_TOKEN") or os.getenv("FONTE_TOKEN")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "8951538688")
+
+BATAS_BROADCAST = int(os.getenv("BATAS_BROADCAST", "5"))
+DELAY_DETIK = int(os.getenv("DELAY_DETIK", "25"))
 
 pengajian_laki = [
     "Ustadz Ihin",
@@ -138,89 +142,77 @@ def besok_awal_bulan_hijriah():
         return False
 
 
-def buat_pesan_dan_target(rows):
-    week = waktu_wib().isocalendar()[1]
-
-    if MODE == "pengajian_laki":
-        ustadz = pengajian_laki[(week - 1) % 4]
-        pesan = f"""
-📢 PENGINGAT PENGAJIAN MALAM RABU
+def pesan_jamaah_pengajian(judul, waktu_text, tempat, pengisi):
+    nama_kegiatan = judul.replace("PENGINGAT ", "").title()
+    return f"""
+📢 {judul}
 
 Assalamu'alaikum Warahmatullahi Wabarakatuh.
 
-Insya Allah malam ini akan dilaksanakan pengajian rutin laki-laki.
+Dengan hormat, kami mengundang Bapak/Ibu jamaah untuk menghadiri:
 
+📖 {nama_kegiatan}
 🎙 Pengisi:
-{ustadz}
+{pengisi}
 
 🕢 Waktu:
-19.30 WIB - 21.30 WIB
+{waktu_text}
 
-🕌 Tempat:
-Madrasah Al-Falah / Masjid Jami Al-Falah
+📍 Tempat:
+{tempat}
 Kp. Caringin
+
+Mari kita bersama-sama menghadiri majelis ilmu untuk menambah wawasan agama, mempererat silaturahmi, serta meraih keberkahan dari Allah SWT.
 
 🌐 Info aplikasi:
 {LINK_APP}
 
-Mohon hadir tepat waktu.
+Terima kasih atas perhatian dan kehadirannya. Semoga amal ibadah kita diterima oleh Allah Subhanahu Wa Ta'ala serta mendapatkan keberkahan dan ridha-Nya.
 
-Jazakumullahu khairan.
-"""
-        target = [
-            r for r in rows
-            if r["JenisKelamin"] == "Laki-laki"
-            and r["Aktif"].lower() == "ya"
-            and not is_khusus_aang(r)
-        ]
-        target = tambah_aang_jika_pengisi(target, rows, ustadz)
-        return "Pengajian Malam Rabu", pesan, target
+Jazakumullahu Khairan Katsiran.
 
-    if MODE == "pengajian_senin":
-        ustadz = pengajian_senin[(week - 1) % 4]
-        pesan = f"""
-📢 PENGINGAT PENGAJIAN SENENAN
+Wassalamu'alaikum Warahmatullahi Wabarakatuh.
 
+🕌 DKM Masjid Jami Al-Falah Caringin
+""".strip()
+
+
+def pesan_pengisi_aang(judul, waktu_text, tempat, pengisi):
+    return f"""
 Assalamu'alaikum Warahmatullahi Wabarakatuh.
 
-Insya Allah besok pagi akan dilaksanakan pengajian rutin Senenan.
+Kepada Yth.
+Pangersa {pengisi}
 
-🎙 Pengisi:
-{ustadz}
+Insya Allah pada:
 
+📖 {judul}
 🕢 Waktu:
-07.30 WIB - 09.00 WIB
+{waktu_text}
 
-🕌 Tempat:
-Madrasah Al-Falah
+📍 Tempat:
+{tempat}
 Kp. Caringin
 
-🌐 Info aplikasi:
-{LINK_APP}
+Pangersa dijadwalkan sebagai pengisi kajian pada kegiatan tersebut.
 
-Mohon hadir tepat waktu.
+Semoga Allah SWT senantiasa memberikan kesehatan, keberkahan, kemudahan, dan kelancaran dalam menyampaikan ilmu yang bermanfaat kepada jamaah.
 
-Jazakumullahu khairan.
-"""
-        target = [
-            r for r in rows
-            if r["JenisKelamin"] == "Perempuan"
-            and r["Aktif"].lower() == "ya"
-            and not is_khusus_aang(r)
-        ]
-        target = tambah_aang_jika_pengisi(target, rows, ustadz)
-        return "Pengajian Senenan", pesan, target
+Jazakumullahu Khairan Katsiran.
 
-    if MODE == "syahriahan":
-        if not besok_awal_bulan_hijriah():
-            print("Besok bukan tanggal 1 Hijriah. WA syahriahan tidak dikirim.")
-            raise SystemExit(0)
-        pesan = f"""
+Wassalamu'alaikum Warahmatullahi Wabarakatuh.
+
+🕌 DKM Masjid Jami Al-Falah Caringin
+""".strip()
+
+
+def pesan_syahriahan():
+    return f"""
 📢 PENGINGAT SYAHRIAHAN SHOLAWAT
 
 Assalamu'alaikum Warahmatullahi Wabarakatuh.
 
-Insya Allah malam ini akan dilaksanakan Syahriahan Sholawat awal bulan Hijriah.
+Dengan hormat, kami mengundang seluruh jamaah dan masyarakat untuk menghadiri kegiatan Syahriahan Sholawat awal bulan Hijriah.
 
 🎙 Pimpinan:
 Aang Deden Kasyful Anwar
@@ -228,20 +220,80 @@ Aang Deden Kasyful Anwar
 🕗 Waktu:
 20.00 WIB - 21.30 WIB
 
-🕌 Tempat:
+📍 Tempat:
 Masjid Jami Al-Falah
 Kp. Caringin
+
+Mari bersama-sama mengikuti pembacaan sholawat, dzikir, dan doa untuk meraih keberkahan dari Allah SWT.
 
 🌐 Info aplikasi:
 {LINK_APP}
 
-Mohon hadir dan ajak keluarga.
+Terima kasih atas perhatian dan kehadirannya. Semoga amal ibadah kita diterima oleh Allah Subhanahu Wa Ta'ala.
 
-Jazakumullahu khairan.
-"""
+Jazakumullahu Khairan Katsiran.
+
+Wassalamu'alaikum Warahmatullahi Wabarakatuh.
+
+🕌 DKM Masjid Jami Al-Falah Caringin
+""".strip()
+
+
+def buat_pesan_dan_target(rows):
+    week = waktu_wib().isocalendar()[1]
+
+    if MODE == "pengajian_laki":
+        ustadz = pengajian_laki[(week - 1) % 4]
+        judul = "PENGINGAT PENGAJIAN MALAM RABU"
+        waktu_text = "19.30 WIB - 21.30 WIB"
+        tempat = "Madrasah Al-Falah / Masjid Jami Al-Falah"
+
+        pesan_umum = pesan_jamaah_pengajian(judul, waktu_text, tempat, ustadz)
+        pesan_aang = pesan_pengisi_aang("Pengajian Malam Rabu", waktu_text, tempat, ustadz)
+
+        target = [
+            r for r in rows
+            if r["JenisKelamin"] == "Laki-laki"
+            and r["Aktif"].lower() == "ya"
+            and not is_khusus_aang(r)
+        ]
+        target = tambah_aang_jika_pengisi(target, rows, ustadz)
+        return "Pengajian Malam Rabu", pesan_umum, pesan_aang, ustadz, target
+
+    if MODE == "pengajian_senin":
+        ustadz = pengajian_senin[(week - 1) % 4]
+        judul = "PENGINGAT PENGAJIAN SENENAN"
+        waktu_text = "07.30 WIB - 09.00 WIB"
+        tempat = "Madrasah Al-Falah"
+
+        pesan_umum = pesan_jamaah_pengajian(judul, waktu_text, tempat, ustadz)
+        pesan_aang = pesan_pengisi_aang("Pengajian Senenan Ibu-Ibu", waktu_text, tempat, ustadz)
+
+        target = [
+            r for r in rows
+            if r["JenisKelamin"] == "Perempuan"
+            and r["Aktif"].lower() == "ya"
+            and not is_khusus_aang(r)
+        ]
+        target = tambah_aang_jika_pengisi(target, rows, ustadz)
+        return "Pengajian Senenan", pesan_umum, pesan_aang, ustadz, target
+
+    if MODE == "syahriahan":
+        if not besok_awal_bulan_hijriah():
+            print("Besok bukan tanggal 1 Hijriah. WA syahriahan tidak dikirim.")
+            raise SystemExit(0)
+
+        pesan_umum = pesan_syahriahan()
+        pesan_aang = pesan_pengisi_aang(
+            "Syahriahan Sholawat",
+            "20.00 WIB - 21.30 WIB",
+            "Masjid Jami Al-Falah",
+            "Aang Deden Kasyful Anwar"
+        )
+
         target = target_aktif_umum(rows)
         target = tambah_aang_jika_pengisi(target, rows, "Aang Deden Kasyful Anwar")
-        return "Syahriahan Sholawat", pesan, target
+        return "Syahriahan Sholawat", pesan_umum, pesan_aang, "Aang Deden Kasyful Anwar", target
 
     raise RuntimeError(f"REMINDER_MODE tidak dikenal: {MODE}")
 
@@ -300,7 +352,7 @@ if wa_auto != "ON":
     raise SystemExit(0)
 
 rows = baca_jamaah(sh)
-jenis, pesan, target = buat_pesan_dan_target(rows)
+jenis, pesan_umum, pesan_aang, pengisi, target = buat_pesan_dan_target(rows)
 
 unik = []
 seen = set()
@@ -308,29 +360,39 @@ for r in target:
     if r["NoWA"] and r["NoWA"] not in seen:
         unik.append(r)
         seen.add(r["NoWA"])
-target = unik
 
-print(f"Mode: {MODE} | Jenis: {jenis} | Target: {len(target)}")
+target = unik[:BATAS_BROADCAST]
+
+print(f"Mode: {MODE} | Jenis: {jenis} | Pengisi: {pengisi} | Target batch: {len(target)}")
 
 sukses = 0
 gagal = 0
+
 for r in target:
+    pesan = pesan_aang if is_khusus_aang(r) and "aang deden" in str(pengisi).lower() else pesan_umum
+
     ok, info = kirim_fonnte(r["NoWA"], pesan)
     status = "Terkirim" if ok else "Gagal"
+
     if ok:
         sukses += 1
     else:
         gagal += 1
+
     simpan_log(sh, r["Nama"], r["NoWA"], f"WA Otomatis {jenis}", status, info)
     print(r["Nama"], r["NoWA"], status, str(info)[:120])
 
-ringkasan = f"""🕌 AL-FALAH DIGITAL V17.1
+    time.sleep(DELAY_DETIK)
+
+ringkasan = f"""🕌 AL-FALAH DIGITAL V21.4
 
 WA Otomatis selesai.
 Jenis: {jenis}
-Target: {len(target)}
+Pengisi: {pengisi}
+Target batch: {len(target)}
 ✅ Berhasil: {sukses}
 ❌ Gagal: {gagal}
 Waktu: {waktu_wib().strftime('%d-%m-%Y %H:%M:%S')} WIB"""
+
 print(ringkasan)
 kirim_ringkasan_telegram(ringkasan)
