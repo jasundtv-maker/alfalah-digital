@@ -6,7 +6,7 @@ import gspread
 from datetime import datetime, timedelta
 from google.oauth2.service_account import Credentials
 
-SHEET_ID = "18Af7MohqKRIOlU9XuGCCmXeSaPfqOv8_DWrGH65Zqtc"
+SHEET_ID = "18Af7MohqKRIOIU9XuGCCmXeSaPfqOv8_DWrGH65Zqtc"
 LINK_APP = "https://kas-masjid-alfalah.streamlit.app"
 MODE = os.getenv("REMINDER_MODE", "pengajian_laki")
 FONNTE_TOKEN = os.getenv("FONNTE_TOKEN") or os.getenv("FONTE_TOKEN")
