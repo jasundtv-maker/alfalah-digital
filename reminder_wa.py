@@ -6,7 +6,7 @@ import gspread
 from datetime import datetime, timedelta
 from google.oauth2.service_account import Credentials
 
-SHEET_ID = "18Af7MohqKRIOIU9XuGCCmXeSaPfqOv8_DWrGH65Zqtc"
+SHEET_URL = "https://docs.google.com/spreadsheets/d/18Af7MohqKRIOIU9XuGCCmXeSaPfqOv8_DWrGH65Zqtc/edit"
 LINK_APP = "https://kas-masjid-alfalah.streamlit.app"
 MODE = os.getenv("REMINDER_MODE", "pengajian_laki")
 
@@ -82,7 +82,7 @@ def buka_sheet():
     if not info:
         raise RuntimeError("GOOGLE_SERVICE_ACCOUNT belum ada di GitHub Secrets")
 
-    print("SHEET_ID DIPAKAI:", SHEET_ID)
+    print("SHEET_URL DIPAKAI:", SHEET_URL)
 
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
@@ -93,7 +93,7 @@ def buka_sheet():
     client = gspread.authorize(creds)
 
     try:
-        sh = client.open_by_key(SHEET_ID)
+        sh = client.open_by_url(SHEET_URL)
         print("GOOGLE SHEET: BERHASIL DIBUKA")
         return sh
     except Exception as e:
