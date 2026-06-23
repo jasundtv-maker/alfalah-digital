@@ -6,7 +6,7 @@ import gspread
 from datetime import datetime, timedelta
 from google.oauth2.service_account import Credentials
 
-SHEET_URL = "https://docs.google.com/spreadsheets/d/18Af7MohqKRIOIU9XuGCCmXeSaPfqOv8_DWrGH65Zqtc/edit"
+SHEET_URL = "https://docs.google.com/spreadsheets/d/18Af7MohqKRIOlU9XuGCCmXeSaPfqOv8_DWrGH65Zqtc/edit"
 LINK_APP = "https://kas-masjid-alfalah.streamlit.app"
 MODE = os.getenv("REMINDER_MODE", "pengajian_laki")
 
