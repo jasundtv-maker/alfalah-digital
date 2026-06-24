@@ -89,15 +89,14 @@ def rupiah(angka):
     except:
         return "Rp 0"
 
-def init_kas():
-    if not os.path.exists(KAS_FILE):
-        pd.DataFrame(DATA_KAS_AWAL, columns=KOLOM_KAS).to_csv(KAS_FILE, index=False)
-
 def load_kas():
-    init_kas()
+    """Baca Kas Masjid dari Google Sheet tab 'Kas Masjid'."""
     try:
-        df = pd.read_csv(KAS_FILE)
-        # dukung file lama yang pakai huruf kecil dari V12
+        df = load_sheet_csv("Kas Masjid")
+
+        if df is None or df.empty:
+            return pd.DataFrame(DATA_KAS_AWAL, columns=KOLOM_KAS)
+
         rename_map = {
             "tanggal": "Tanggal",
             "jenis": "Jenis",
@@ -107,17 +106,43 @@ def load_kas():
             "petugas": "Petugas",
         }
         df = df.rename(columns=rename_map)
+
         for k in KOLOM_KAS:
             if k not in df.columns:
                 df[k] = 0 if k == "Jumlah" else ""
+
         df["Jumlah"] = pd.to_numeric(df["Jumlah"], errors="coerce").fillna(0)
+
         return df[KOLOM_KAS]
-    except Exception:
+
+    except Exception as e:
+        st.warning(f"Gagal membaca Kas Masjid dari Google Sheet: {e}")
         return pd.DataFrame(DATA_KAS_AWAL, columns=KOLOM_KAS)
 
-def save_kas(df):
-    df.to_csv(KAS_FILE, index=False)
 
+def save_kas(df):
+    """Simpan Kas Masjid ke Google Sheet tab 'Kas Masjid'."""
+    sh, info = koneksi_google_sheet_write()
+    if sh is None:
+        raise Exception(f"Gagal koneksi Google Sheet: {info}")
+
+    try:
+        ws = sh.worksheet("Kas Masjid")
+    except Exception:
+        ws = sh.add_worksheet(title="Kas Masjid", rows=1000, cols=6)
+
+    df = df.copy()
+
+    for k in KOLOM_KAS:
+        if k not in df.columns:
+            df[k] = 0 if k == "Jumlah" else ""
+
+    df = df[KOLOM_KAS]
+
+    ws.clear()
+    ws.append_row(KOLOM_KAS)
+    if not df.empty:
+        ws.append_rows(df.astype(str).values.tolist(), value_input_option="USER_ENTERED")
 def load_pengumuman():
     if os.path.exists(PENGUMUMAN_FILE):
         try:
