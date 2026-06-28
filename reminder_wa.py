@@ -1,40 +1,29 @@
 import os
 import json
-import time
 import requests
 import gspread
 from datetime import datetime, timedelta
 from google.oauth2.service_account import Credentials
 
-SHEET_URL = "https://docs.google.com/spreadsheets/d/18Af7MohqKRIOlU9XuGCCmXeSaPfqOv8_DWrGH65Zqtc/edit"
+SHEET_ID = "18Af7MohqKRIOlU9XuGCCmXeSaPfqOv8_DWrGH65Zqtc"
 LINK_APP = "https://kas-masjid-alfalah.streamlit.app"
-MODE = os.getenv("REMINDER_MODE", "pengajian_laki")
-
+MODE = os.getenv("REMINDER_MODE", "pengajian_salasaan")
 FONNTE_TOKEN = os.getenv("FONNTE_TOKEN") or os.getenv("FONTE_TOKEN")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "8951538688")
 
-BATAS_BROADCAST = int(os.getenv("BATAS_BROADCAST", "5"))
-DELAY_DETIK = int(os.getenv("DELAY_DETIK", "25"))
-
-pengajian_laki = [
-    "Ustadz Ihin",
-    "Ustadz Nanang",
-    "Ustadz Jujun",
-    "Aang Deden Kasyful Anwar",
+pengajian_laki = ["Ustadz Ihin", "Ustadz Nanang", "Ustadz Jujun", "Aang Deden Kasyful Anwar"]
+pengajian_senin = ["Ustadz Nanang", "Aang Deden Kasyful Anwar", "Ustadz Ihin", "Ustadz Ihin"]
+PENUTUP = [
+    "Mari kita luangkan waktu untuk menghadiri majelis ilmu, mempererat ukhuwah Islamiyah, serta bersama-sama menambah ilmu agama demi meraih ridha Allah SWT.",
+    "Majelis ilmu adalah salah satu jalan menuju rahmat Allah. Semoga Allah SWT memudahkan langkah kita untuk menghadirinya.",
+    "Semoga setiap langkah menuju majelis ilmu menjadi sebab bertambahnya keberkahan hidup kita.",
+    "Dengan penuh kerendahan hati, mari kita hidupkan majelis ilmu sebagai sarana memperkuat iman dan silaturahmi.",
+    "Semoga Allah SWT menggerakkan hati kita untuk mencintai majelis ilmu dan memudahkan langkah menuju kebaikan.",
 ]
-
-pengajian_senin = [
-    "Ustadz Nanang",
-    "Aang Deden Kasyful Anwar",
-    "Ustadz Ihin",
-    "Ustadz Ihin",
-]
-
 
 def waktu_wib():
     return datetime.utcnow() + timedelta(hours=7)
-
 
 def normalisasi_wa(nomor):
     nomor = str(nomor).replace("+", "").replace("-", "").replace(" ", "").strip()
@@ -42,117 +31,79 @@ def normalisasi_wa(nomor):
         nomor = "62" + nomor[1:]
     return nomor
 
+def minggu():
+    return waktu_wib().isocalendar()[1]
+
+def penutup():
+    return PENUTUP[minggu() % len(PENUTUP)]
 
 def ambil_service_account_info():
     raw = os.getenv("GOOGLE_SERVICE_ACCOUNT") or os.getenv("GCP_SERVICE_ACCOUNT")
-
     if raw:
-        print("GOOGLE_SERVICE_ACCOUNT: TERBACA")
-        try:
-            info = json.loads(raw)
-            print("CLIENT_EMAIL:", info.get("client_email"))
-            return info
-        except Exception as e:
-            raise RuntimeError(f"GOOGLE_SERVICE_ACCOUNT tidak valid JSON: {e}")
-
-    keys = [
-        "type", "project_id", "private_key_id", "private_key", "client_email",
-        "client_id", "auth_uri", "token_uri", "auth_provider_x509_cert_url",
-        "client_x509_cert_url", "universe_domain",
-    ]
-
+        return json.loads(raw)
+    keys = ["type", "project_id", "private_key_id", "private_key", "client_email", "client_id", "auth_uri", "token_uri", "auth_provider_x509_cert_url", "client_x509_cert_url", "universe_domain"]
     info = {k: os.getenv(k) for k in keys if os.getenv(k)}
-
     if "private_key" in info:
         info["private_key"] = info["private_key"].replace("\\n", "\n")
-
     if "client_email" in info and "private_key" in info:
         info.setdefault("type", "service_account")
         info.setdefault("token_uri", "https://oauth2.googleapis.com/token")
-        print("SERVICE ACCOUNT DARI ENV TERPISAH")
-        print("CLIENT_EMAIL:", info.get("client_email"))
         return info
-
     return None
-
 
 def buka_sheet():
     info = ambil_service_account_info()
-
     if not info:
         raise RuntimeError("GOOGLE_SERVICE_ACCOUNT belum ada di GitHub Secrets")
-
-    print("SHEET_URL DIPAKAI:", SHEET_URL)
-
-    scopes = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive",
-    ]
-
+    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     creds = Credentials.from_service_account_info(info, scopes=scopes)
-    client = gspread.authorize(creds)
+    return gspread.authorize(creds).open_by_key(SHEET_ID)
 
+def baca_setting(sh, worksheet="Setting WA"):
     try:
-        sh = client.open_by_url(SHEET_URL)
-        print("GOOGLE SHEET: BERHASIL DIBUKA")
-        return sh
-    except Exception as e:
-        print("GOOGLE SHEET: GAGAL DIBUKA")
-        print("ERROR:", e)
-        raise
-
-
-def baca_setting(sh):
-    try:
-        rows = sh.worksheet("Setting WA").get_all_records()
-        setting = {}
-
+        rows = sh.worksheet(worksheet).get_all_records()
+        hasil = {}
         for r in rows:
             key = str(r.get("Key", "")).strip()
             val = str(r.get("Value", "")).strip()
             if key:
-                setting[key] = val
-
-        return setting
+                hasil[key] = val
+        return hasil
     except Exception as e:
-        print("Gagal membaca Setting WA:", e)
+        print(f"Gagal membaca {worksheet}:", e)
         return {}
 
+def baca_setting_pengajian(sh):
+    try:
+        rows = sh.worksheet("Setting Pengajian").get_all_records()
+        hasil = {}
+        for r in rows:
+            kegiatan = str(r.get("Kegiatan", "")).strip().lower()
+            if kegiatan:
+                hasil[kegiatan] = {str(k).strip(): str(v).strip() for k, v in r.items()}
+        return hasil
+    except Exception as e:
+        print("Setting Pengajian tidak terbaca:", e)
+        return {}
+
+def get_setting(settings, kegiatan, kolom, default=""):
+    row = settings.get(kegiatan.lower().strip(), {})
+    val = str(row.get(kolom, "")).strip()
+    return val if val else default
 
 def baca_jamaah(sh):
     rows = sh.worksheet("Jamaah").get_all_records()
     hasil = []
-
     for r in rows:
         r = {str(k).strip(): v for k, v in r.items()}
-
-        nama = str(r.get("Nama", "")).strip()
-        jk = str(r.get("JenisKelamin", "")).strip()
-        nowa = normalisasi_wa(r.get("NoWA", ""))
-        aktif = str(r.get("Aktif", "")).strip()
-        catatan = str(r.get("Catatan", "")).strip()
-
-        if nama and nowa:
-            hasil.append({
-                "Nama": nama,
-                "JenisKelamin": jk,
-                "NoWA": nowa,
-                "Aktif": aktif,
-                "Catatan": catatan,
-            })
-
+        r["Nama"] = str(r.get("Nama", "")).strip()
+        r["JenisKelamin"] = str(r.get("JenisKelamin", "")).strip()
+        r["NoWA"] = normalisasi_wa(r.get("NoWA", ""))
+        r["Aktif"] = str(r.get("Aktif", "")).strip()
+        r["Catatan"] = str(r.get("Catatan", "")).strip()
+        if r["Nama"] and r["NoWA"]:
+            hasil.append(r)
     return hasil
-
-
-def is_laki(jk):
-    jk = str(jk).lower().strip()
-    return jk in ["l", "laki", "laki-laki", "pria"]
-
-
-def is_perempuan(jk):
-    jk = str(jk).lower().strip()
-    return jk in ["p", "perempuan", "wanita", "ibu"]
-
 
 def is_khusus_aang(row):
     nama = row.get("Nama", "").lower()
@@ -160,341 +111,179 @@ def is_khusus_aang(row):
     catatan = row.get("Catatan", "").lower()
     return "aang deden" in nama or (aktif == "khusus" and "pengisi" in catatan)
 
-
-def target_aktif_umum(rows):
-    return [
-        r for r in rows
-        if r.get("Aktif", "").lower() == "ya"
-        and not is_khusus_aang(r)
-    ]
-
-
 def tambah_aang_jika_pengisi(target, rows, pengisi_text):
     if "aang deden" not in str(pengisi_text).lower():
         return target
-
     hasil = list(target)
-    nomor_sudah = {r["NoWA"] for r in hasil}
-
+    sudah = {r["NoWA"] for r in hasil}
     for r in rows:
-        if is_khusus_aang(r) and r["NoWA"] not in nomor_sudah:
+        if is_khusus_aang(r) and r["NoWA"] not in sudah:
             hasil.append(r)
-            nomor_sudah.add(r["NoWA"])
-
+            sudah.add(r["NoWA"])
     return hasil
 
-
-def besok_awal_bulan_hijriah():
-    try:
-        besok = waktu_wib() + timedelta(days=1)
-        tanggal_api = besok.strftime("%d-%m-%Y")
-        url = f"https://api.aladhan.com/v1/gToH/{tanggal_api}"
-
-        r = requests.get(url, timeout=20).json()
-        hari_hijriah = int(r["data"]["hijri"]["day"])
-
-        print("Hijriah besok:", hari_hijriah)
-
-        return hari_hijriah == 1
-    except Exception as e:
-        print("Gagal cek Hijriah:", e)
-        return False
-
-
-def pesan_jamaah_pengajian(judul, waktu_text, tempat, pengisi):
-    nama_kegiatan = judul.replace("PENGINGAT ", "").title()
-
-    return f"""
-📢 {judul}
+def pesan_salasaan():
+    return f"""🕌 PENGAJIAN SALASAAN
 
 Assalamu'alaikum Warahmatullahi Wabarakatuh.
 
-Dengan hormat, kami mengundang para jamaah untuk menghadiri:
+Insya Allah malam ini akan dilaksanakan Pengajian Salasaan untuk bapak-bapak.
 
-📖 {nama_kegiatan}
-
-🎙️ Pengisi:
-{pengisi}
+📍 Tempat:
+Madrasah Al-Mutmainnah
 
 🕢 Waktu:
-{waktu_text}
+Ba'da Shalat Isya
 
-📍 Tempat:
-{tempat}
-Kp. Caringin
+{penutup()}
 
-🌐 Info aplikasi:
-{LINK_APP}
+Semoga Allah SWT memberikan kemudahan langkah, kesehatan, dan keberkahan kepada kita semua.
 
-Terima kasih sudah hadir.
-
-Semoga ibadah kita diterima oleh Allah Subhanahu Wa Ta'ala serta diberikan keberkahan oleh-Nya.
-
-Jazakumullahu Khairan Katsiran.
+Jazakumullahu khairan katsiran.
 
 Wassalamu'alaikum Warahmatullahi Wabarakatuh.
 
-🕌 DKM Masjid Jami Al-Falah Caringin
-""".strip()
+🕌 DKM Masjid Jami Al-Falah"""
 
-
-def pesan_pengisi_aang(judul, waktu_text, tempat, pengisi):
-    return f"""
-📢 PEMBERITAHUAN PENGISI PENGAJIAN
+def pesan_malam_rebo(settings):
+    default = pengajian_laki[(minggu() - 1) % 4]
+    ustadz = get_setting(settings, "Pengajian Malam Rebo", "PengisiManual", default)
+    pesan = f"""🕌 PENGAJIAN MALAM REBO
 
 Assalamu'alaikum Warahmatullahi Wabarakatuh.
 
-Kepada Yth.
-Pangersa {pengisi}
+Insya Allah malam ini akan dilaksanakan Pengajian Malam Rebo untuk bapak-bapak.
 
-Dengan hormat kami sampaikan bahwa insya Allah Pangersa Aang akan menjadi pengisi pada kegiatan:
-
-📖 {judul}
+👳 Pengisi:
+{ustadz}
 
 🕢 Waktu:
-{waktu_text}
+19.30 WIB - 21.30 WIB
 
 📍 Tempat:
-{tempat}
-Kp. Caringin
+Masjid/Madrasah Al-Falah
 
-Terima kasih atas kesediaan dan pengabdiannya dalam membimbing jamaah.
+{penutup()}
 
-Semoga Allah SWT senantiasa memberikan kesehatan, keberkahan, kemudahan, dan kelancaran dalam menyampaikan ilmu yang bermanfaat.
+Semoga Allah SWT memberikan kemudahan langkah, kesehatan, dan keberkahan kepada kita semua.
 
-Jazakumullahu Khairan Katsiran.
+Jazakumullahu khairan katsiran.
 
 Wassalamu'alaikum Warahmatullahi Wabarakatuh.
 
-🕌 DKM Masjid Jami Al-Falah Caringin
-""".strip()
+🕌 DKM Masjid Jami Al-Falah"""
+    return pesan, ustadz
 
-
-def pesan_syahriahan():
-    return f"""
-📢 PENGINGAT SYAHRIAHAN SHOLAWAT
+def pesan_senenan(settings):
+    default = pengajian_senin[(minggu() - 1) % 4]
+    ustadz = get_setting(settings, "Pengajian Senenan Ibu-Ibu", "PengisiManual", default)
+    pesan = f"""🌸 PENGAJIAN SENENAN IBU-IBU
 
 Assalamu'alaikum Warahmatullahi Wabarakatuh.
 
-Dengan hormat, kami mengundang seluruh jamaah dan masyarakat untuk menghadiri kegiatan Syahriahan Sholawat awal bulan Hijriah.
+Insya Allah besok pagi akan dilaksanakan Pengajian Senenan Ibu-Ibu.
 
-🎙️ Pimpinan:
-Aang Deden Kasyful Anwar
+👳 Pengisi:
+{ustadz}
 
-🕗 Waktu:
-20.00 WIB - 21.30 WIB
+🕢 Waktu:
+07.30 WIB - 09.00 WIB
 
 📍 Tempat:
-Masjid Jami Al-Falah
-Kp. Caringin
+Madrasah Al-Falah
 
-Mari bersama-sama mengikuti pembacaan sholawat, dzikir, dan doa untuk meraih keberkahan dari Allah SWT.
+{penutup()}
 
-🌐 Info aplikasi:
-{LINK_APP}
+Semoga Allah SWT memberikan kemudahan langkah, kesehatan, dan keberkahan kepada kita semua.
 
-Terima kasih atas perhatian dan kehadirannya. Semoga amal ibadah kita diterima oleh Allah Subhanahu Wa Ta'ala.
-
-Jazakumullahu Khairan Katsiran.
+Jazakumullahu khairan katsiran.
 
 Wassalamu'alaikum Warahmatullahi Wabarakatuh.
 
-🕌 DKM Masjid Jami Al-Falah Caringin
-""".strip()
+🕌 DKM Masjid Jami Al-Falah"""
+    return pesan, ustadz
 
-
-def buat_pesan_dan_target(rows):
-    week = waktu_wib().isocalendar()[1]
-
+def buat_pesan_dan_target(rows, settings):
+    if MODE == "pengajian_salasaan":
+        pesan = pesan_salasaan()
+        target = [r for r in rows if r["JenisKelamin"] == "Laki-laki" and r["Aktif"].lower() == "ya" and not is_khusus_aang(r)]
+        return "Pengajian Salasaan", pesan, target
     if MODE == "pengajian_laki":
-        ustadz = pengajian_laki[(week - 1) % 4]
-        judul = "PENGINGAT PENGAJIAN MALAM RABU"
-        waktu_text = "19.30 WIB - 21.30 WIB"
-        tempat = "Madrasah Al-Falah"
-
-        pesan_umum = pesan_jamaah_pengajian(judul, waktu_text, tempat, ustadz)
-        pesan_aang = pesan_pengisi_aang("Pengajian Malam Rabu", waktu_text, tempat, ustadz)
-
-        target = [
-            r for r in rows
-            if is_laki(r["JenisKelamin"])
-            and r["Aktif"].lower() == "ya"
-            and not is_khusus_aang(r)
-        ]
-
+        pesan, ustadz = pesan_malam_rebo(settings)
+        target = [r for r in rows if r["JenisKelamin"] == "Laki-laki" and r["Aktif"].lower() == "ya" and not is_khusus_aang(r)]
         target = tambah_aang_jika_pengisi(target, rows, ustadz)
-
-        return "Pengajian Malam Rabu", pesan_umum, pesan_aang, ustadz, target
-
+        return "Pengajian Malam Rebo", pesan, target
     if MODE == "pengajian_senin":
-        ustadz = pengajian_senin[(week - 1) % 4]
-        judul = "PENGINGAT PENGAJIAN SENENAN"
-        waktu_text = "07.30 WIB - 09.00 WIB"
-        tempat = "Madrasah Al-Falah"
-
-        pesan_umum = pesan_jamaah_pengajian(judul, waktu_text, tempat, ustadz)
-        pesan_aang = pesan_pengisi_aang("Pengajian Senenan Ibu-Ibu", waktu_text, tempat, ustadz)
-
-        target = [
-            r for r in rows
-            if is_perempuan(r["JenisKelamin"])
-            and r["Aktif"].lower() == "ya"
-            and not is_khusus_aang(r)
-        ]
-
+        pesan, ustadz = pesan_senenan(settings)
+        target = [r for r in rows if r["JenisKelamin"] == "Perempuan" and r["Aktif"].lower() == "ya" and not is_khusus_aang(r)]
         target = tambah_aang_jika_pengisi(target, rows, ustadz)
-
-        return "Pengajian Senenan", pesan_umum, pesan_aang, ustadz, target
-
-    if MODE == "syahriahan":
-        if not besok_awal_bulan_hijriah():
-            print("Besok bukan tanggal 1 Hijriah. WA syahriahan tidak dikirim.")
-            raise SystemExit(0)
-
-        pesan_umum = pesan_syahriahan()
-        pesan_aang = pesan_pengisi_aang(
-            "Syahriahan Sholawat",
-            "20.00 WIB - 21.30 WIB",
-            "Masjid Jami Al-Falah",
-            "Aang Deden Kasyful Anwar"
-        )
-
-        target = target_aktif_umum(rows)
-        target = tambah_aang_jika_pengisi(target, rows, "Aang Deden Kasyful Anwar")
-
-        return "Syahriahan Sholawat", pesan_umum, pesan_aang, "Aang Deden Kasyful Anwar", target
-
-    raise RuntimeError(f"REMINDER_MODE tidak dikenal: {MODE}")
-
+        return "Pengajian Senenan Ibu-Ibu", pesan, target
+    print("REMINDER_MODE tidak dikenal:", MODE)
+    raise SystemExit(0)
 
 def kirim_fonnte(nomor, pesan):
     if not FONNTE_TOKEN:
         return False, "FONNTE_TOKEN belum ada di GitHub Secrets"
-
-    res = requests.post(
-        "https://api.fonnte.com/send",
-        headers={"Authorization": FONNTE_TOKEN},
-        data={
-            "target": normalisasi_wa(nomor),
-            "message": pesan,
-            "countryCode": "62"
-        },
-        timeout=30,
-    )
-
+    r = requests.post("https://api.fonnte.com/send", headers={"Authorization": FONNTE_TOKEN}, data={"target": normalisasi_wa(nomor), "message": pesan, "countryCode": "62"}, timeout=30)
     try:
-        detail = res.json()
+        detail = r.json()
     except Exception:
-        detail = res.text
-
-    if res.status_code == 200:
+        detail = r.text
+    if r.status_code == 200:
         return True, str(detail)
-
-    return False, f"HTTP {res.status_code}: {detail}"
-
+    return False, f"HTTP {r.status_code}: {detail}"
 
 def simpan_log(sh, nama, nowa, jenis, status, ket):
     try:
         ws = sh.worksheet("Log WA")
-        ws.append_row(
-            [
-                waktu_wib().strftime("%Y-%m-%d %H:%M:%S"),
-                nama,
-                nowa,
-                jenis,
-                status,
-                str(ket)[:500],
-            ],
-            value_input_option="USER_ENTERED",
-        )
+        ws.append_row([waktu_wib().strftime("%Y-%m-%d %H:%M:%S"), nama, nowa, jenis, status, str(ket)[:500]], value_input_option="USER_ENTERED")
     except Exception as e:
         print("Gagal simpan Log WA:", e)
 
-
 def kirim_ringkasan_telegram(text):
     if not TELEGRAM_BOT_TOKEN:
-        print("TELEGRAM_BOT_TOKEN tidak ada. Ringkasan Telegram dilewati.")
         return
-
     try:
-        requests.post(
-            f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
-            json={
-                "chat_id": TELEGRAM_CHAT_ID,
-                "text": text
-            },
-            timeout=30,
-        )
+        requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage", json={"chat_id": TELEGRAM_CHAT_ID, "text": text}, timeout=30)
     except Exception as e:
         print("Gagal kirim ringkasan Telegram:", e)
 
-
-# ===============================
-# MULAI JALANKAN PROGRAM
-# ===============================
-
 sh = buka_sheet()
-
-setting = baca_setting(sh)
-wa_auto = setting.get("WA_AUTO", "OFF").strip().upper()
-
+setting_wa = baca_setting(sh, "Setting WA")
+wa_auto = setting_wa.get("WA_AUTO", "OFF").strip().upper()
 print("WA_AUTO:", wa_auto)
-
 if wa_auto != "ON":
     print("WA otomatis dinonaktifkan dari Google Sheet Setting WA.")
-    print("Ubah WA_AUTO menjadi ON jika ingin mengaktifkan WA otomatis.")
     raise SystemExit(0)
 
+setting_pengajian = baca_setting_pengajian(sh)
 rows = baca_jamaah(sh)
-jenis, pesan_umum, pesan_aang, pengisi, target = buat_pesan_dan_target(rows)
+jenis, pesan, target = buat_pesan_dan_target(rows, setting_pengajian)
 
-unik = []
-seen = set()
-
+unik, seen = [], set()
 for r in target:
     if r["NoWA"] and r["NoWA"] not in seen:
         unik.append(r)
         seen.add(r["NoWA"])
+target = unik
+print(f"Mode: {MODE} | Jenis: {jenis} | Target: {len(target)}")
 
-target = unik[:BATAS_BROADCAST]
-
-print(f"Mode: {MODE}")
-print(f"Jenis: {jenis}")
-print(f"Pengisi: {pengisi}")
-print(f"Target batch: {len(target)}")
-
-sukses = 0
-gagal = 0
-
+sukses = gagal = 0
 for r in target:
-    if is_khusus_aang(r) and "aang deden" in str(pengisi).lower():
-        pesan = pesan_aang
-    else:
-        pesan = pesan_umum
-
     ok, info = kirim_fonnte(r["NoWA"], pesan)
     status = "Terkirim" if ok else "Gagal"
-
-    if ok:
-        sukses += 1
-    else:
-        gagal += 1
-
+    sukses += 1 if ok else 0
+    gagal += 0 if ok else 1
     simpan_log(sh, r["Nama"], r["NoWA"], f"WA Otomatis {jenis}", status, info)
-
     print(r["Nama"], r["NoWA"], status, str(info)[:120])
 
-    time.sleep(DELAY_DETIK)
-
-ringkasan = f"""🕌 AL-FALAH DIGITAL V21.5
+ringkasan = f"""🕌 AL-FALAH DIGITAL V20
 
 WA Otomatis selesai.
 Jenis: {jenis}
-Pengisi: {pengisi}
-Target batch: {len(target)}
+Target: {len(target)}
 ✅ Berhasil: {sukses}
 ❌ Gagal: {gagal}
 Waktu: {waktu_wib().strftime('%d-%m-%Y %H:%M:%S')} WIB"""
-
 print(ringkasan)
 kirim_ringkasan_telegram(ringkasan)
