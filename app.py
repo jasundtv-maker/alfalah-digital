@@ -923,7 +923,7 @@ def status_pengajian_terdekat():
     agenda[0]["target"] = agenda[0]["mulai"]
     return agenda[0], "menunggu"
 
-kas_df = load_kas()
+kas_df = load_kas_sheet_terpisah("Kas Masjid")
 kas_madrasah_df = load_kas_sheet_terpisah("Kas Madrasah")
 kas_rajaban_df = load_kas_sheet_terpisah("Kas Rajaban")
 pengumuman_df = load_pengumuman()
