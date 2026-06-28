@@ -1,0 +1,31 @@
+name: Laporan Bulanan WA
+
+on:
+  schedule:
+    - cron: '0 13 1 * *'   # Jam 20:00 WIB tanggal 1 setiap bulan
+  workflow_dispatch:
+
+jobs:
+  kirim-laporan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Library
+        run: |
+          pip install requests gspread google-auth
+
+      - name: Kirim Laporan Bulanan
+        env:
+          GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+          FONNTE_TOKEN: ${{ secrets.FONNTE_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python laporan_bulanan_wa.py
