@@ -12,8 +12,19 @@ FONNTE_TOKEN = os.getenv("FONNTE_TOKEN") or os.getenv("FONTE_TOKEN")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "8951538688")
 
-pengajian_laki = ["Ustadz Ihin", "Ustadz Nanang", "Ustadz Jujun", "Aang Deden Kasyful Anwar"]
-pengajian_senin = ["Ustadz Nanang", "Aang Deden Kasyful Anwar", "Ustadz Ihin", "Ustadz Ihin"]
+pengajian_laki = [
+    "Ustadz Jujun",
+    "Aang Deden Kasyful Anwar",
+    "Ustadz Ihin",
+    "Ustadz Nanang"
+]
+
+pengajian_senin = [
+    "Ustadz Ihin",
+    "Ustadz Ihin",
+    "Ustadz Nanang",
+    "Aang Deden Kasyful Anwar"
+]
 PENUTUP = [
     "Mari kita luangkan waktu untuk menghadiri majelis ilmu, mempererat ukhuwah Islamiyah, serta bersama-sama menambah ilmu agama demi meraih ridha Allah SWT.",
     "Majelis ilmu adalah salah satu jalan menuju rahmat Allah. Semoga Allah SWT memudahkan langkah kita untuk menghadirinya.",
