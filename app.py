@@ -923,16 +923,7 @@ def status_pengajian_terdekat():
     agenda[0]["target"] = agenda[0]["mulai"]
     return agenda[0], "menunggu"
 
-kas_df = load_kas_sheet_terpisah("Kas Masjid")
-rename_map = {
-    "tanggal": "Tanggal",
-    "jenis": "Jenis",
-    "kategori": "Kategori",
-    "keterangan": "Keterangan",
-    "jumlah": "Jumlah",
-    "petugas": "Petugas",
-}
-
+kas_df = load_kas()
 kas_df = kas_df.rename(columns=rename_map)
 kas_madrasah_df = load_kas_sheet_terpisah("Kas Madrasah")
 kas_rajaban_df = load_kas_sheet_terpisah("Kas Rajaban")
