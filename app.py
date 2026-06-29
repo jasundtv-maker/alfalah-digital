@@ -138,7 +138,7 @@ def rapikan_kas_terpisah(df):
     return df
 
 
-kas_df = load_kas_sheet_terpisah("Kas Masjid")
+    kas_df = load_kas_sheet_terpisah("Kas Masjid")
     df = load_sheet_csv(sheet_name)
 
     print("DEBUG SHEET:", sheet_name)
