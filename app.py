@@ -930,6 +930,7 @@ kas_rajaban_df = load_kas_sheet_terpisah("Kas Rajaban")
 pengumuman_df = load_pengumuman()
 pengumuman_aktif_df = filter_pengumuman_aktif(pengumuman_df)
 
+
 # Setting dari Google Sheet jika tersedia
 setting_wa_online = load_setting_wa()
 LINK_APP = setting_wa_online.get("LinkApp", LINK_APP)
