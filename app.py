@@ -140,10 +140,10 @@ def rapikan_kas_terpisah(df):
 
 def load_kas_sheet_terpisah(sheet_name):
     """Baca kas terpisah dari Google Sheet: Kas Madrasah / Kas Rajaban."""
-    df = load_sheet_csv(sheet_name)
-    return rapikan_kas_terpisah(df)
-    def load_kas_masjid_sheet():
-    df = load_sheet_csv("Kas Masjid")
+        df = load_sheet_csv(sheet_name)
+        return rapikan_kas_terpisah(df)
+        def load_kas_masjid_sheet():
+        df = load_sheet_csv("Kas Masjid")
 
     if df is None or df.empty:
         return pd.DataFrame(columns=KOLOM_KAS)
