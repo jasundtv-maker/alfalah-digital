@@ -1,60 +1,50 @@
+:::writing{variant="document" id="58361"}
 name: Al-Falah Digital V21 Auto
 
 on:
-schedule:
-- cron: "0 13 * * 0"  # Minggu 20:00 WIB - Pengajian Senenan
-- cron: "0 9 * * 1"   # Senin 16:00 WIB - Pengajian Salasaan
-- cron: "0 9 * * 2"   # Selasa 16:00 WIB - Pengajian Malam Rebo
-- cron: "0 9 * * 4"   # Kamis 16:00 WIB - Syahriahan
+  schedule:
+    - cron: "0 13 * * 0"
+    - cron: "0 9 * * 1"
+    - cron: "0 9 * * 2"
+    - cron: "0 9 * * 4"
 
-workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
-pengingat:
-runs-on: ubuntu-latest
+  pengingat:
+    runs-on: ubuntu-latest
 
-```
-steps:
-  - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
-  - uses: actions/setup-python@v5
-    with:
-      python-version: "3.11"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-  - run: pip install requests gspread google-auth
+      - run: pip install requests gspread google-auth
 
-  - name: Kirim WhatsApp Otomatis
-    env:
-      FONNTE_TOKEN: ${{ secrets.FONNTE_TOKEN }}
-      GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
-      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      - name: Kirim WhatsApp Otomatis
+        env:
+          FONNTE_TOKEN: ${{ secrets.FONNTE_TOKEN }}
+          GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
 
-    run: |
-      DAY=$(date -u +%u)
+        run: |
+          DAY=$(date -u +%u)
 
-      echo "DAY=$DAY"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            REMINDER_MODE=pengajian_laki python reminder_wa.py
 
-      if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-        echo "Manual Run -> Pengajian Malam Rebo"
-        REMINDER_MODE=pengajian_laki python reminder_wa.py
+          elif [ "$DAY" = "7" ]; then
+            REMINDER_MODE=pengajian_senin python reminder_wa.py
 
-      elif [ "$DAY" = "7" ]; then
-        echo "Pengajian Senenan"
-        REMINDER_MODE=pengajian_senin python reminder_wa.py
+          elif [ "$DAY" = "1" ]; then
+            REMINDER_MODE=pengajian_salasaan python reminder_wa.py
 
-      elif [ "$DAY" = "1" ]; then
-        echo "Pengajian Salasaan"
-        REMINDER_MODE=pengajian_salasaan python reminder_wa.py
+          elif [ "$DAY" = "2" ]; then
+            REMINDER_MODE=pengajian_laki python reminder_wa.py
 
-      elif [ "$DAY" = "2" ]; then
-        echo "Pengajian Malam Rebo"
-        REMINDER_MODE=pengajian_laki python reminder_wa.py
-
-      elif [ "$DAY" = "4" ]; then
-        echo "Syahriahan"
-        REMINDER_MODE=syahriahan python reminder_wa.py
-
-      else
-        echo "Tidak ada jadwal hari ini"
-      fi
-```
+          elif [ "$DAY" = "4" ]; then
+            REMINDER_MODE=syahriahan python reminder_wa.py
+          fi
+:::
