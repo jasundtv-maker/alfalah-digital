@@ -140,32 +140,8 @@ def rapikan_kas_terpisah(df):
 
 def load_kas_sheet_terpisah(sheet_name):
     """Baca kas terpisah dari Google Sheet: Kas Madrasah / Kas Rajaban."""
-        df = load_sheet_csv(sheet_name)
-        return rapikan_kas_terpisah(df)
-        def load_kas_masjid_sheet():
-        df = load_sheet_csv("Kas Masjid")
-
-    if df is None or df.empty:
-        return pd.DataFrame(columns=KOLOM_KAS)
-
-    for k in KOLOM_KAS:
-        if k not in df.columns:
-            df[k] = 0 if k == "Jumlah" else ""
-
-    df = df[KOLOM_KAS].copy()
-
-    df["Tanggal"] = df["Tanggal"].astype(str).str.strip()
-    df["Jenis"] = df["Jenis"].astype(str).str.strip()
-    df["Kategori"] = df["Kategori"].astype(str).str.strip()
-    df["Keterangan"] = df["Keterangan"].astype(str).str.strip()
-    df["Petugas"] = df["Petugas"].astype(str).str.strip()
-
-    df["Jumlah"] = pd.to_numeric(
-        df["Jumlah"],
-        errors="coerce"
-    ).fillna(0)
-
-    return df
+    df = load_sheet_csv(sheet_name)
+    return rapikan_kas_terpisah(df)
 
 
 def simpan_kas_sheet_terpisah(sheet_name, tanggal, keterangan, masuk, keluar, petugas):
@@ -947,7 +923,7 @@ def status_pengajian_terdekat():
     agenda[0]["target"] = agenda[0]["mulai"]
     return agenda[0], "menunggu"
 
-kas_df = load_kas_masjid_sheet()
+kas_df = load_kas()
 kas_madrasah_df = load_kas_sheet_terpisah("Kas Madrasah")
 kas_rajaban_df = load_kas_sheet_terpisah("Kas Rajaban")
 pengumuman_df = load_pengumuman()
