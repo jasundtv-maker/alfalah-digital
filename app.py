@@ -924,12 +924,10 @@ def status_pengajian_terdekat():
     return agenda[0], "menunggu"
 
 kas_df = load_kas()
-kas_df = kas_df.rename(columns=rename_map)
 kas_madrasah_df = load_kas_sheet_terpisah("Kas Madrasah")
 kas_rajaban_df = load_kas_sheet_terpisah("Kas Rajaban")
 pengumuman_df = load_pengumuman()
 pengumuman_aktif_df = filter_pengumuman_aktif(pengumuman_df)
-
 
 # Setting dari Google Sheet jika tersedia
 setting_wa_online = load_setting_wa()
