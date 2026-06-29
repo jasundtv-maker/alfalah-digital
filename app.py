@@ -932,6 +932,7 @@ rename_map = {
     "jumlah": "Jumlah",
     "petugas": "Petugas",
 }
+
 kas_df = kas_df.rename(columns=rename_map)
 kas_madrasah_df = load_kas_sheet_terpisah("Kas Madrasah")
 kas_rajaban_df = load_kas_sheet_terpisah("Kas Rajaban")
