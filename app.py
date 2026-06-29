@@ -138,13 +138,11 @@ def rapikan_kas_terpisah(df):
     return df
 
 
-    kas_df = load_kas_sheet_terpisah("Kas Masjid")
+def load_kas_sheet_terpisah(sheet_name):
+    """Baca kas terpisah dari Google Sheet: Kas Madrasah / Kas Rajaban."""
     df = load_sheet_csv(sheet_name)
-
-    print("DEBUG SHEET:", sheet_name)
-    print("DEBUG KOLOM:", df.columns.tolist())
-
     return rapikan_kas_terpisah(df)
+
 
 def simpan_kas_sheet_terpisah(sheet_name, tanggal, keterangan, masuk, keluar, petugas):
     """Simpan transaksi kas terpisah ke Google Sheet."""
