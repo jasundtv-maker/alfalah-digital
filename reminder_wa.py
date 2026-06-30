@@ -21,8 +21,8 @@ pengajian_laki = [
 
 pengajian_senin = [
     "Ustadz Ihin",
-    "Ustadz Ihin",
     "Ustadz Nanang",
+    "Ustadz Ihin",
     "Aang Deden Kasyful Anwar"
 ]
 PENUTUP = [
