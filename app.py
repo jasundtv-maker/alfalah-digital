@@ -45,7 +45,7 @@ pengurus = {
 }
 
 pengajian_malam_rabu = ["Ustadz Ihin", "Ustadz Nanang", "Ustadz Jujun", "Aang Deden"]
-pengajian_senin = ["Ustadz Nanang", "Aang Deden", "Ustadz Ihin", "Ustadz Ihin"]
+pengajian_senin = ["Ustadz Ihin", "Aang Deden", "Ustadz Ihin", "Ustadz Nanang"]
 
 agenda_tetap = [
     ["Pengajian Salasaan", "Senin Malam Selasa", "Ba'da Isya", "Madrasah Al-Mutmainnah"],
