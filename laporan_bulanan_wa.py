@@ -24,25 +24,20 @@ def normalisasi_wa(nomor):
 
 def buka_sheet():
     creds_json = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT"])
-    scopes = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive"
-    ]
+    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     creds = Credentials.from_service_account_info(creds_json, scopes=scopes)
     gc = gspread.authorize(creds)
     
-    # Sistem "Coba Lagi" (Retry) maksimal 3 kali untuk mengatasi Error 503
-    for percobaan in range(3):
-        try:
-            return gc.open_by_key(SHEET_ID)
-        except Exception as e:
-            print(f"⚠️ Percobaan {percobaan + 1} gagal membuka Google Sheets: {e}")
-            if percobaan < 2:
-                print("⏳ Menunggu 10 detik sebelum mencoba lagi...")
-                time.sleep(10)
-            else:
-                print("❌ Gagal membuka Google Sheets setelah 3 kali percobaan.")
-                raise e
+    # KITA UJI COBA: Robot ini bisa lihat file apa saja?
+    print("Mencoba membuka spreadsheet dengan ID:", SHEET_ID)
+    try:
+        return gc.open_by_key(SHEET_ID)
+    except gspread.exceptions.SpreadsheetNotFound:
+        print("❌ Error: Spreadsheet tidak ditemukan dengan ID tersebut.")
+        print("💡 Tips: Pastikan SHEET_ID di kode sama persis dengan yang ada di URL Browser.")
+        # Coba buka berdasarkan nama file sebagai alternatif (jika ID tetap gagal)
+        print("Mencoba mencari berdasarkan nama file...")
+        return gc.open("Data Jamaah Al-Falah")
 
 def hitung_kas_madrasah(sh):
     ws = sh.worksheet("Kas Madrasah")
