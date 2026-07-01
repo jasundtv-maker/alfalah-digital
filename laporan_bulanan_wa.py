@@ -24,55 +24,46 @@ def normalisasi_wa(nomor):
 
 def buka_sheet():
     creds_json = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT"])
-    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
     creds = Credentials.from_service_account_info(creds_json, scopes=scopes)
     gc = gspread.authorize(creds)
     
-    # KITA UJI COBA: Robot ini bisa lihat file apa saja?
-    print("Mencoba membuka spreadsheet dengan ID:", SHEET_ID)
+    # Mencoba membuka spreadsheet dengan ID, jika gagal coba berdasarkan nama file
     try:
         return gc.open_by_key(SHEET_ID)
-    except gspread.exceptions.SpreadsheetNotFound:
-        print("❌ Error: Spreadsheet tidak ditemukan dengan ID tersebut.")
-        print("💡 Tips: Pastikan SHEET_ID di kode sama persis dengan yang ada di URL Browser.")
-        # Coba buka berdasarkan nama file sebagai alternatif (jika ID tetap gagal)
-        print("Mencoba mencari berdasarkan nama file...")
+    except Exception as e:
+        print(f"Gagal membuka dengan ID, mencoba mencari berdasarkan nama... Error: {e}")
         return gc.open("Data Jamaah Al-Falah")
 
 def hitung_kas_madrasah(sh):
     ws = sh.worksheet("Kas Madrasah")
     data = ws.get_all_records()
-    
     masuk = sum(float(row.get("Masuk", 0) or 0) for row in data)
     keluar = sum(float(row.get("Keluar", 0) or 0) for row in data)
-    
     return masuk - keluar
 
 def hitung_kas_rajaban(sh):
     ws = sh.worksheet("Kas Rajaban")
     data = ws.get_all_records()
-    
     masuk = sum(float(row.get("Masuk", 0) or 0) for row in data)
     keluar = sum(float(row.get("Keluar", 0) or 0) for row in data)
-    
     return masuk - keluar
 
 def hitung_kas_masjid(sh):
     ws = sh.worksheet("Kas Masjid")
     data = ws.get_all_records()
-    
     pemasukan = 0
     pengeluaran = 0
-    
     for row in data:
         jenis = str(row.get("Jenis", "")).strip().lower()
         jumlah = float(row.get("Jumlah", 0) or 0)
-        
         if jenis == "pemasukan":
             pemasukan += jumlah
         elif jenis == "pengeluaran":
             pengeluaran += jumlah
-            
     return pemasukan - pengeluaran
 
 def format_rupiah(nilai):
@@ -81,19 +72,12 @@ def format_rupiah(nilai):
 def kirim_wa(nomor, pesan):
     headers = {"Authorization": FONNTE_TOKEN}
     data = {"target": nomor, "message": pesan}
-    
-    response = requests.post(
-        "https://api.fonnte.com/send",
-        headers=headers,
-        data=data,
-        timeout=30
-    )
+    response = requests.post("https://api.fonnte.com/send", headers=headers, data=data, timeout=30)
     response.raise_for_status()
 
 def kirim_telegram(pesan):
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         return
-        
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": pesan}, timeout=30)
 
@@ -101,18 +85,14 @@ def ambil_penerima(sh):
     ws = sh.worksheet("Jamaah")
     data = ws.get_all_records()
     hasil = []
-    
     for row in data:
         aktif = str(row.get("Aktif", "")).strip().lower()
         if aktif != "ya":
             continue
-            
         nomor = normalisasi_wa(row.get("NoWA", ""))
         if len(nomor) < 10:
             continue
-            
         hasil.append(nomor)
-        
     return list(set(hasil))
 
 def buat_pesan(kas_masjid, kas_madrasah, kas_rajaban):
@@ -123,47 +103,46 @@ Assalamu'alaikum Warahmatullahi Wabarakatuh.
 
 Alhamdulillah, berikut kami sampaikan laporan kas saat ini:
 
-💰 Kas Masjid
-{format_rupiah(kas_masjid)}
+💰 Kas Masjid: {format_rupiah(kas_masjid)}
+🎓 Kas Madrasah: {format_rupiah(kas_madrasah)}
+🏮 Kas Rajaban: {format_rupiah(kas_rajaban)}
 
-🎓 Kas Madrasah
-{format_rupiah(kas_madrasah)}
+🙏 Terima kasih kepada seluruh jamaah & donatur.
+🌐 Info: https://kas-masjid-alfalah.streamlit.app
 
-🏮 Kas Rajaban
-{format_rupiah(kas_rajaban)}
-
-🙏 Kami mengucapkan terima kasih kepada seluruh jamaah, masyarakat, para donatur, pengurus DKM, serta semua pihak yang telah berpartisipasi dalam memakmurkan Masjid Jami Al-Falah.
-
-Semoga setiap infak, sedekah, tenaga, dan dukungan yang diberikan menjadi amal jariyah yang terus mengalir pahalanya serta mendapat balasan terbaik dari Allah SWT.
-
-🌐 Informasi lengkap:
-https://kas-masjid-alfalah.streamlit.app
-
-Wassalamu'alaikum Warahmatullahi Wabarakatuh."""
+Wassalamu'alaikum."""
 
 def main():
     print("Memulai proses laporan...")
-    sh = buka_sheet()
-    
-    kas_masjid = hitung_kas_masjid(sh)
-    kas_madrasah = hitung_kas_madrasah(sh)
-    kas_rajaban = hitung_kas_rajaban(sh)
-    
-    pesan = buat_pesan(kas_masjid, kas_madrasah, kas_rajaban)
-    penerima = ambil_penerima(sh)
-    
-    print(f"Jumlah penerima aktif: {len(penerima)}")
-    
-    for nomor in penerima:
-        try:
-            kirim_wa(nomor, pesan)
-            print(f"✅ Terkirim: {nomor}")
-            time.sleep(2)  # Jeda 2 detik agar tidak dianggap spam
-        except Exception as e:
-            print(f"❌ Gagal: {nomor} - Error: {e}")
-            
-    kirim_telegram(pesan)
-    print("Laporan bulanan selesai dan berhasil dikirim.")
+    try:
+        sh = buka_sheet()
+        kas_masjid = hitung_kas_masjid(sh)
+        kas_madrasah = hitung_kas_madrasah(sh)
+        kas_rajaban = hitung_kas_rajaban(sh)
+        pesan = buat_pesan(kas_masjid, kas_madrasah, kas_rajaban)
+        penerima = ambil_penerima(sh)
+        
+        # 1. Kirim ke WhatsApp
+        for nomor in penerima:
+            try:
+                kirim_wa(nomor, pesan)
+                print(f"✅ Terkirim: {nomor}")
+                time.sleep(2)
+            except Exception as e:
+                print(f"❌ Gagal WA ke {nomor}: {e}")
+        
+    except Exception as e:
+        print(f"Terjadi error pada sistem: {e}")
+
+    # 2. Kirim ke Telegram (Pasti dijalankan meskipun proses WA gagal/berhenti)
+    try:
+        if 'pesan' in locals():
+            kirim_telegram(pesan)
+            print("✅ Laporan berhasil dikirim ke Telegram.")
+    except Exception as e:
+        print(f"❌ Gagal kirim Telegram: {e}")
+
+    print("Laporan bulanan selesai.")
 
 if __name__ == "__main__":
     main()
