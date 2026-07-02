@@ -2,6 +2,9 @@ import os
 import json
 import requests
 import gspread
+import time      # <-- Ditambahkan untuk sistem jeda
+import random    # <-- Ditambahkan untuk sistem jeda acak
+
 from datetime import datetime, timedelta
 from google.oauth2.service_account import Credentials
 
@@ -25,6 +28,7 @@ pengajian_senin = [
     "Ustadz Ihin",
     "Aang Deden Kasyful Anwar"
 ]
+
 PENUTUP = [
     "Mari kita luangkan waktu untuk menghadiri majelis ilmu, mempererat ukhuwah Islamiyah, serta bersama-sama menambah ilmu agama demi meraih ridha Allah SWT.",
     "Majelis ilmu adalah salah satu jalan menuju rahmat Allah. Semoga Allah SWT memudahkan langkah kita untuk menghadirinya.",
@@ -287,6 +291,12 @@ for r in target:
     gagal += 0 if ok else 1
     simpan_log(sh, r["Nama"], r["NoWA"], f"WA Otomatis {jenis}", status, info)
     print(r["Nama"], r["NoWA"], status, str(info)[:120])
+    
+    # --- BAGIAN PENTING: Jeda acak 15-30 detik agar tidak ke-banned ---
+    if r != target[-1]:  # Tidak perlu jeda setelah pesan terakhir
+        jeda = random.uniform(15, 30)
+        print(f"⏳ Menunggu {jeda:.2f} detik sebelum pesan berikutnya...")
+        time.sleep(jeda)
 
 ringkasan = f"""🕌 AL-FALAH DIGITAL V20
 
