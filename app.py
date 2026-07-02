@@ -95,23 +95,19 @@ def init_kas():
 
 def load_kas():
     """Membaca Kas Masjid langsung dari Google Sheet"""
-    df = load_sheet_csv("Kas Masjid") # Menggunakan fungsi load_sheet_csv yang sudah ada
+    df = load_sheet_csv("Kas Masjid")
     if df.empty:
         return pd.DataFrame(columns=KOLOM_KAS)
-    
+
     # Konversi data ke format yang benar
     df["Jumlah"] = pd.to_numeric(df["Jumlah"], errors="coerce").fillna(0)
+    
+    # Memastikan kolom sesuai dengan KOLOM_KAS
+    for k in KOLOM_KAS:
+        if k not in df.columns:
+            df[k] = 0 if k == "Jumlah" else ""
+            
     return df[KOLOM_KAS]
-        }
-        df = df.rename(columns=rename_map)
-        for k in KOLOM_KAS:
-            if k not in df.columns:
-                df[k] = 0 if k == "Jumlah" else ""
-        df["Jumlah"] = pd.to_numeric(df["Jumlah"], errors="coerce").fillna(0)
-        return df[KOLOM_KAS]
-    except Exception:
-        return pd.DataFrame(DATA_KAS_AWAL, columns=KOLOM_KAS)
-
 def save_kas(df):
     df.to_csv(KAS_FILE, index=False)
 
