@@ -3,6 +3,7 @@ import json
 import requests
 import gspread
 import time
+import random  # <-- Ditambahkan untuk jeda acak anti-banned
 
 from google.oauth2.service_account import Credentials
 from datetime import datetime, timedelta
@@ -122,17 +123,24 @@ def main():
         pesan = buat_pesan(kas_masjid, kas_madrasah, kas_rajaban)
         penerima = ambil_penerima(sh)
         
-        # 1. Kirim ke WhatsApp
+        print(f"Jumlah penerima aktif: {len(penerima)}")
+        
+        # 1. Kirim ke WhatsApp dengan jeda acak yang lebih aman
         for nomor in penerima:
             try:
                 kirim_wa(nomor, pesan)
                 print(f"✅ Terkirim: {nomor}")
-                time.sleep(2)
+                
+                # Jeda acak antara 15 sampai 30 detik
+                jeda = random.uniform(15, 30)
+                print(f"⏳ Menunggu {jeda:.2f} detik sebelum pesan berikutnya...")
+                time.sleep(jeda)
+                
             except Exception as e:
                 print(f"❌ Gagal WA ke {nomor}: {e}")
         
     except Exception as e:
-        print(f"Terjadi error pada sistem: {e}")
+        print(f"Terjadi error pada sistem utama: {e}")
 
     # 2. Kirim ke Telegram (Pasti dijalankan meskipun proses WA gagal/berhenti)
     try:
