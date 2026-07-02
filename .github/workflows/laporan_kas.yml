@@ -1,0 +1,24 @@
+name: Kirim Laporan Kas Bulanan
+
+on:
+  schedule:
+    # Tanggal 1 setiap bulan, jam 08:00 WIB (01:00 UTC)
+    - cron: "0 1 1 * *" 
+  workflow_dispatch:
+
+jobs:
+  kirim-laporan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests gspread google-auth
+      - name: Kirim Laporan Bulanan
+        env:
+          FONNTE_TOKEN: ${{ secrets.FONNTE_TOKEN }}
+          GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python laporan_bulanan_wa.py
