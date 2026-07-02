@@ -94,17 +94,14 @@ def init_kas():
         pd.DataFrame(DATA_KAS_AWAL, columns=KOLOM_KAS).to_csv(KAS_FILE, index=False)
 
 def load_kas():
-    init_kas()
-    try:
-        df = pd.read_csv(KAS_FILE)
-        # dukung file lama yang pakai huruf kecil dari V12
-        rename_map = {
-            "tanggal": "Tanggal",
-            "jenis": "Jenis",
-            "kategori": "Kategori",
-            "keterangan": "Keterangan",
-            "jumlah": "Jumlah",
-            "petugas": "Petugas",
+    """Membaca Kas Masjid langsung dari Google Sheet"""
+    df = load_sheet_csv("Kas Masjid") # Menggunakan fungsi load_sheet_csv yang sudah ada
+    if df.empty:
+        return pd.DataFrame(columns=KOLOM_KAS)
+    
+    # Konversi data ke format yang benar
+    df["Jumlah"] = pd.to_numeric(df["Jumlah"], errors="coerce").fillna(0)
+    return df[KOLOM_KAS]
         }
         df = df.rename(columns=rename_map)
         for k in KOLOM_KAS:
@@ -940,7 +937,13 @@ hijriah_text = kalender_hijriah_online(tanggal_wib)
 sholat = jadwal_sholat_cianjur()
 
 st.sidebar.title("🕌 APP AL-FALAH V20")
+# Tambahkan fitur ganti ustadz darurat di Sidebar
+if "ustadz_pengganti" not in st.session_state:
+    st.session_state.ustadz_pengganti = ""
 
+with st.sidebar.expander("🛠️ Pengganti Ustadz Darurat"):
+    st.session_state.ustadz_pengganti = st.text_input("Ganti Nama Ustadz Hari Ini", value=st.session_state.ustadz_pengganti)
+    st.caption("Kosongkan jika tidak ada penggantian.")
 mode = st.sidebar.radio("Mode Aplikasi", ["👥 Jamaah", "🔐 Admin"])
 
 if mode == "🔐 Admin":
@@ -1392,14 +1395,17 @@ h1, h2, h3 {
     st.markdown("## 📌 Jadwal Kegiatan Rutin Pekanan")
     a, b, c = st.columns(3)
 
-    with a:
+    with b:
+        # Tentukan pengisi (Gunakan pengisi darurat jika ada)
+        pengisi_tampil = st.session_state.ustadz_pengganti if st.session_state.ustadz_pengganti else ustadz_rabu
+        
         st.markdown(f"""
-        <div style="background:#ecfeff;border:1px solid #06b6d4;padding:24px;border-radius:22px;box-shadow:0 6px 18px rgba(0,0,0,.10);">
-            <h3>📖 Pengajian Salasaan</h3>
-            <p><b>📅 Tanggal:</b> {format_tanggal(tgl_salasaan)}</p>
-            <p><b>🕢 Waktu:</b> Ba'da Isya</p>
-            <p><b>📍 Tempat:</b> Madrasah Al-Mutmainnah</p>
-            <p style="font-size:14px;color:#374151;">Pengumuman otomatis: Senin pukul 16.00 WIB.</p>
+        <div style="background:#f0fdf4;border:1px solid #22c55e;padding:24px;border-radius:22px;box-shadow:0 6px 18px rgba(0,0,0,.10);">
+            <h3>🕌 Pengajian Malam Rebo</h3>
+            <p><b>📅 Tanggal:</b> {format_tanggal(tgl_rabu)}</p>
+            <p><b>🕢 Waktu:</b> 19:30 - 21:30 WIB</p>
+            <p><b>👳 Pengisi:</b> {pengisi_tampil}</p>
+            <p style="font-size:14px;color:#374151;">Pengisi bisa diganti dari menu ⚙️ Pengaturan Pengajian.</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1415,12 +1421,15 @@ h1, h2, h3 {
         """, unsafe_allow_html=True)
 
     with c:
+        # Tambahkan logika ini: jika ada ustadz pengganti, gunakan itu; jika tidak, gunakan jadwal rutin
+        pengisi_ibu_tampil = st.session_state.ustadz_pengganti if st.session_state.ustadz_pengganti else ustadz_senin
+        
         st.markdown(f"""
         <div style="background:#fffbeb;border:1px solid #f59e0b;padding:24px;border-radius:22px;box-shadow:0 6px 18px rgba(0,0,0,.10);">
             <h3>🌸 Pengajian Senenan Ibu-Ibu</h3>
             <p><b>📅 Tanggal:</b> {format_tanggal(tgl_senin)}</p>
             <p><b>🕢 Waktu:</b> 07:30 - 09:00 WIB</p>
-            <p><b>👳 Pengisi:</b> {ustadz_senin}</p>
+            <p><b>👳 Pengisi:</b> {pengisi_ibu_tampil}</p>
             <p style="font-size:14px;color:#374151;">Pengumuman otomatis: Minggu pukul 20.00 WIB.</p>
         </div>
         """, unsafe_allow_html=True)
